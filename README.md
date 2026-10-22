@@ -8,7 +8,7 @@ Course project by six Erasmus students, autumn 2026. Final delivery: 15 January 
 
 - **[The plan](docs/plan.md):** what we're building and for whom, how it works, the tech stack, the schedule, testing and risks.
 - **[How we work](docs/how-we-work.md):** issues, branches, pull requests and the board, explained step by step. Read this before your first task.
-- **[The board](https://github.com/orgs/scamdle/projects/1):** every task, who owns it and where it stands. Filter on `assignee:@me` to see yours.
+- **[The board](https://github.com/orgs/scamdle/projects/1):** every task, who owns it and where it stands. See view "My Tasks" to find issues assigned to you.
 
 ## Team
 
