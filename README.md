@@ -16,7 +16,8 @@ Add yourself here in your first practice pull request (see [How we work](docs/ho
 
 | Name | Role |
 | --- | --- |
-| Jasper | Project lead, backend lead |
+| Jasper | Project lead, backend lead, make change |
+| new | line |
 
 ## Changing the docs
 
