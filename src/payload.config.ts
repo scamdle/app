@@ -26,6 +26,9 @@ export default buildConfig({
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
   db: postgresAdapter({
+    // Never change the schema automatically: everyone shares one database, so every
+    // schema change goes through a migration (npm run payload migrate:create).
+    push: false,
     pool: {
       connectionString: process.env.DATABASE_URL || '',
     },
