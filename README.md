@@ -39,6 +39,7 @@ Add yourself here in your first practice pull request (see [How we work](docs/ho
 | Jasper | Project lead, backend lead, make change |
 | Gijs | Frontend lead | 
 | Hendrik | backend developer |
+| Pedro | Backend developer |
 | new | line |
 
 ## Changing the docs
