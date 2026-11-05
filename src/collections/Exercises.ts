@@ -18,6 +18,29 @@ export const Exercises: CollectionConfig = {
       required: true,
     },
     {
+      name: 'email',
+      type: 'group',
+      admin: {
+        // Only show these fields when the editor picks this format.
+        condition: (data) => data?.format === 'spot-red-flags',
+      },
+      fields: [
+        { name: 'fromName', type: 'text' },
+        { name: 'fromAddress', type: 'text' },
+        { name: 'subject', type: 'text' },
+        { name: 'body', type: 'textarea' },
+        {
+          name: 'hotspots',
+          type: 'array',
+          admin: { description: 'Each red flag: copy the exact text from the email above, then explain why it is suspicious.' },
+          fields: [
+            { name: 'text', type: 'text', required: true },
+            { name: 'reason', type: 'textarea', required: true },
+          ],
+        },
+      ],
+    },
+    {
       name: 'category',
       type: 'select',
       required: true,
