@@ -70,6 +70,7 @@ export interface Config {
     users: User;
     media: Media;
     exercises: Exercise;
+    'daily-sets': DailySet;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -80,6 +81,7 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     exercises: ExercisesSelect<false> | ExercisesSelect<true>;
+    'daily-sets': DailySetsSelect<false> | DailySetsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -170,29 +172,81 @@ export interface Media {
  */
 export interface Exercise {
   id: number;
+  /**
+   * Shown to the player before the level starts.
+   */
   title: string;
+  /**
+   * The situation, e.g. "Anna got this email this morning." How to play is added automatically.
+   */
+  description?: string | null;
+  format: 'spot-red-flags' | 'real-or-fake' | 'side-by-side' | 'what-next';
+  medium: 'email' | 'message' | 'link' | 'image' | 'video';
+  /**
+   * Which players get this exercise.
+   */
+  region: 'all' | 'ee' | 'nl' | 'de' | 'pt' | 'be';
   email?: {
     fromName?: string | null;
     fromAddress?: string | null;
     subject?: string | null;
     body?: string | null;
+  };
+  message?: {
+    platform?: ('sms' | 'whatsapp' | 'messenger') | null;
     /**
-     * Each red flag: copy the exact text from the email above, then explain why it is suspicious.
+     * The name or number shown at the top of the chat.
      */
-    hotspots?:
+    sender?: string | null;
+    bubbles?:
       | {
           text: string;
-          reason: string;
           id?: string | null;
         }[]
       | null;
   };
-  category: 'email' | 'links' | 'messages' | 'fake-screens' | 'ai-media';
-  format: 'spot-red-flags' | 'real-or-fake' | 'what-next';
+  link?: {
+    /**
+     * Where the link was seen, e.g. "In a text from Lumo Bank".
+     */
+    context?: string | null;
+    /**
+     * The link exactly as it appears. Players only read it; it never opens.
+     */
+    url?: string | null;
+  };
   /**
-   * Placeholder until the exercise format is agreed in #15.
+   * Text in the picture must be readable on a phone, so use phone-sized screenshots. Give the file a neutral name and alt text: players can see both.
    */
-  content?:
+  image?: (number | null) | Media;
+  /**
+   * A YouTube or Vimeo link, or a direct link to a video file.
+   */
+  videoUrl?: string | null;
+  /**
+   * The game decides which one appears on which side. Give files neutral names: players can see them.
+   */
+  comparison?: {
+    realImage?: (number | null) | Media;
+    fakeImage?: (number | null) | Media;
+    realVideoUrl?: string | null;
+    fakeVideoUrl?: string | null;
+  };
+  /**
+   * Copy the exact text from the message above, then explain why it is suspicious.
+   */
+  flags?:
+    | {
+        text: string;
+        reason: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * How many wrong taps end the level. Correct taps are free.
+   */
+  maxWrongGuesses?: number | null;
+  dots?:
     | {
         [k: string]: unknown;
       }
@@ -201,6 +255,29 @@ export interface Exercise {
     | number
     | boolean
     | null;
+  verdict?: ('real' | 'fake') | null;
+  /**
+   * Shown after the player answers.
+   */
+  answerReason?: string | null;
+  /**
+   * Shown next to the message, e.g. "What should Anna do?"
+   */
+  scenario?: string | null;
+  /**
+   * Tick every option that is correct. Players choose all the right ones.
+   */
+  options?:
+    | {
+        text: string;
+        isCorrect?: boolean | null;
+        explanation?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Optional lesson shown with the results.
+   */
   explanation?: {
     root: {
       type: string;
@@ -217,6 +294,23 @@ export interface Exercise {
     [k: string]: unknown;
   } | null;
   status: 'draft' | 'in-review' | 'published';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Choose the 3 tasks for a date. If a date has no set, players get the most recent earlier one.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "daily-sets".
+ */
+export interface DailySet {
+  id: number;
+  /**
+   * As YYYY-MM-DD, e.g. 2026-11-20.
+   */
+  date: string;
+  region: 'all' | 'ee' | 'nl' | 'de' | 'pt' | 'be';
+  exercises: (number | Exercise)[];
   updatedAt: string;
   createdAt: string;
 }
@@ -255,6 +349,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'exercises';
         value: number | Exercise;
+      } | null)
+    | ({
+        relationTo: 'daily-sets';
+        value: number | DailySet;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -345,6 +443,10 @@ export interface MediaSelect<T extends boolean = true> {
  */
 export interface ExercisesSelect<T extends boolean = true> {
   title?: T;
+  description?: T;
+  format?: T;
+  medium?: T;
+  region?: T;
   email?:
     | T
     | {
@@ -352,19 +454,68 @@ export interface ExercisesSelect<T extends boolean = true> {
         fromAddress?: T;
         subject?: T;
         body?: T;
-        hotspots?:
+      };
+  message?:
+    | T
+    | {
+        platform?: T;
+        sender?: T;
+        bubbles?:
           | T
           | {
               text?: T;
-              reason?: T;
               id?: T;
             };
       };
-  category?: T;
-  format?: T;
-  content?: T;
+  link?:
+    | T
+    | {
+        context?: T;
+        url?: T;
+      };
+  image?: T;
+  videoUrl?: T;
+  comparison?:
+    | T
+    | {
+        realImage?: T;
+        fakeImage?: T;
+        realVideoUrl?: T;
+        fakeVideoUrl?: T;
+      };
+  flags?:
+    | T
+    | {
+        text?: T;
+        reason?: T;
+        id?: T;
+      };
+  maxWrongGuesses?: T;
+  dots?: T;
+  verdict?: T;
+  answerReason?: T;
+  scenario?: T;
+  options?:
+    | T
+    | {
+        text?: T;
+        isCorrect?: T;
+        explanation?: T;
+        id?: T;
+      };
   explanation?: T;
   status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "daily-sets_select".
+ */
+export interface DailySetsSelect<T extends boolean = true> {
+  date?: T;
+  region?: T;
+  exercises?: T;
   updatedAt?: T;
   createdAt?: T;
 }
