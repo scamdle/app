@@ -171,6 +171,22 @@ export interface Media {
 export interface Exercise {
   id: number;
   title: string;
+  email?: {
+    fromName?: string | null;
+    fromAddress?: string | null;
+    subject?: string | null;
+    body?: string | null;
+    /**
+     * Each red flag: copy the exact text from the email above, then explain why it is suspicious.
+     */
+    hotspots?:
+      | {
+          text: string;
+          reason: string;
+          id?: string | null;
+        }[]
+      | null;
+  };
   category: 'email' | 'links' | 'messages' | 'fake-screens' | 'ai-media';
   format: 'spot-red-flags' | 'real-or-fake' | 'what-next';
   /**
@@ -329,6 +345,21 @@ export interface MediaSelect<T extends boolean = true> {
  */
 export interface ExercisesSelect<T extends boolean = true> {
   title?: T;
+  email?:
+    | T
+    | {
+        fromName?: T;
+        fromAddress?: T;
+        subject?: T;
+        body?: T;
+        hotspots?:
+          | T
+          | {
+              text?: T;
+              reason?: T;
+              id?: T;
+            };
+      };
   category?: T;
   format?: T;
   content?: T;
