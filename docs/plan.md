@@ -43,15 +43,18 @@ Example users to design for:
 
 ## Scope and requirements
 
+> **First playable prototype (November 2026).** The team changed several decisions after sketching the game flow. The sections below are updated where they changed; the prototype's limits are listed under [Prototype status](#prototype-status).
+
 Version 1 (15 January) covers the daily set, all four exercise formats, the guides, and optional accounts. Everything else waits for the idea board. The list is sorted with MoSCoW: Must, Should, Could, Won't (for now).
 
 | Priority | Requirement |
 | --- | --- |
-| Must | A daily set of 3 exercises, each from a different category, the same for everyone |
+| Must | A daily set of 3 exercises per region, chosen by hand in the admin for now |
 | Must | Persona card: Anna, the fictional person every exercise is addressed to |
-| Must | Engine: spot the red flags (scam or real, then tap the suspicious parts) for emails, links, messages and screens |
-| Must | Engine: real or fake for email addresses, AI-made images and videos, and ID-app screens |
-| Must | Engine: what would you do next? (multiple-choice situations, one or two steps) |
+| Must | Engine: spot the red flags. Tap suspicious text in emails, links and messages, or drag circles onto spots in images |
+| Must | Engine: real or fake for links, images and videos |
+| Must | Engine: side by side. Compare two images or videos and pick the real one |
+| Must | Engine: what would you do next? Tick every right action, for emails and SMS |
 | Must | Stars per exercise (0–3) and feedback after every exercise: what was right, what was missed, and why |
 | Must | Guides: how to tell real from fake, for the exercises and for real life |
 | Must | Guest play with the streak saved on the device |
@@ -69,25 +72,19 @@ The three Could items are on the idea board. We only build them if the Musts and
 
 ## Exercises: categories, formats and scam types
 
-There are five categories and three ways of answering (engines). Each daily set has three different categories and uses at least two different engines. Both teams build each engine once and reuse it in every category.
+Each exercise has a format (how it plays), a medium (what the player looks at) and a region. Each format is built once and reused for its media.
 
-**Three exercise engines**
+| Format | Media | How it plays |
+| --- | --- | --- |
+| Spot the red flags | Email, link, SMS, WhatsApp, Messenger | Every word or link part can be tapped, like "inspect element". Each tap instantly shows right or wrong, with a live count such as 2/4. Correct taps are free. The editor sets how many wrong guesses end the level (default 3). |
+| Spot the red flags | Image | One circle per hidden spot. Players drag each circle onto a spot, or tap a circle and then the picture, and press Check. They get 3 Checks: correct circles lock, wrong ones return. |
+| Real or fake | Video, link, image | One item and a big X or check mark. |
+| Side by side | Image, video | Two items, A and B. One is real and one is fake; the player picks the real one. |
+| What would you do next? | Email, SMS | The message with a scenario beside it. The player ticks every right action and presses Check once. |
 
-1. **Spot the red flags.** Two steps. First the user decides: *scam or real?* If they say scam, they tap every part that gave it away, like using "inspect element" on it. Each tappable part is either a red flag or a safe part, and each one carries an explanation.
-2. **Real or fake.** The user sees 2–3 items (email addresses, images, videos, Smart-ID screens) and picks the fake one, or judges a single item as real or fake.
-3. **What would you do next?** A short situation ("You get this text…", "Your 'grandson' calls and says…"), and the user picks the best next action from 3–4 choices. A situation can have a second step where the scammer reacts ("The caller says the bank is closed, so call this number instead").
+Red-flags levels always contain flags, so there's no first "scam or real?" step.
 
-**Five categories**
-
-| Category | What the user practises | Engines | Example |
-| --- | --- | --- | --- |
-| Email | Phishing emails and sender addresses | Red flags, Real or fake, What next | "Your account is blocked" email from lumobank-veilig.com |
-| Links | Reading a web address | Red flags, What next | lumobank.com.secure-login.net/verify |
-| Messages and calls | SMS, WhatsApp and phone call scams | Red flags, What next | "Hi Grandma, this is Max, new number, I need money urgently" |
-| Fake screens | Pop-ups, fake login pages, digital ID requests | Red flags, Real or fake, What next | A Smart-ID PIN request Anna didn't start, a "Your computer is infected" pop-up |
-| AI media | AI-made photos and videos | Real or fake | A video of a celebrity promoting a crypto investment |
-
-**Not everything is a scam.** About one in three items is real, for example a genuine message from Anna's bank about her new card. Users should learn to *check*, not to distrust everything. A real message gives full stars to whoever recognises it as real.
+**Not everything is a scam.** Real items appear in real or fake and side by side, for example a genuine page from Anna's bank. Users should learn to *check*, not to distrust everything.
 
 **Scam tactics as tags.** Every red flag gets a tag for the tactic behind it, so feedback and statistics can talk about tactics and not just single exercises:
 
@@ -149,7 +146,9 @@ All companies and domains (Lumo Bank, SwiftParcel, Brightwatt, lumomail.com) are
 
 Everyone gets the same three exercises per calendar day. The server picks them in advance, checks the answers, and keeps the streak.
 
-**Picking the daily set** (a scheduled job, once a day)
+**Picking the daily set.** For now an editor chooses it in the admin: one entry per date and region with 3 published exercises. If a date has no entry, players get the most recent earlier set. The automatic job below can fill the same entries later.
+
+**The automatic job** (later, once a day)
 
 1. Fill the schedule 14 days ahead, so there is always a buffer and the team can see what's coming.
 2. For each new day, choose 3 *different* categories with at least two different engines, rotating so no category is skipped more than 2 days in a row.
@@ -159,12 +158,12 @@ Everyone gets the same three exercises per calendar day. The server picks them i
 
 **The day boundary.** "Today" is the user's local date. Portugal is UTC+0 and Estonia UTC+2, so the browser sends its local date and the server returns that day's set.
 
-**Country variants.** A few exercises (such as digital ID requests) have a variant per country: Smart-ID for Estonia, itsme for Belgium, DigiD for the Netherlands, and so on. The daily set stays the same for everyone, and each user sees their own country's variant.
+**Regions.** Countries have their own scams, so an exercise isn't just a translation: editors choose its region (All regions, Estonia, Netherlands, Germany, Portugal or Belgium), and each region gets its own daily set. The prototype is English only and everyone plays All regions. A region picker or automatic detection comes later.
 
 **Playing and scoring**
 
-- The server checks every answer, not the browser. We save each attempt (exercise, answer, stars, time taken). This is our research data: which scams and tactics fool people most.
-- After each exercise, the feedback screen shows what was right, what was missed and why, and links to the matching guide. The star rules are under [Scoring](#scoring) below.
+- The server checks every answer, not the browser, and answers only reach the browser with the final results. The prototype doesn't save attempts yet; once it does, they're our research data on which scams fool people most. Players can replay a level, and the best stars count. Stars stay on the device for now.
+- After each exercise, the results show what was right, what was missed and why. Then a pop-up gives the stars and returns to the home screen. The star rules are under [Scoring](#scoring) below.
 
 **Streaks**
 
@@ -185,8 +184,8 @@ Draft → In review → Published. Whoever writes an exercise can't approve it: 
 
 | Entity | Key fields |
 | --- | --- |
-| Exercise | category, engine, country (or all), difficulty, content per language, parts (each: red flag yes/no, tactic tag, explanation), related guide, status, author |
-| DailySet | date, 3 exercises |
+| Exercise | title, description, format, medium, region, content per medium, answers per format, explanation, status. See `src/collections/Exercises.ts` |
+| DailySet | date, region, 3 exercises |
 | Guide | category, title, body per language, linked exercises |
 | User | email, language, country, reminder opt-in (later) |
 | Attempt | user or guest id, exercise, date, answer, score, seconds taken |
@@ -195,40 +194,27 @@ Draft → In review → Published. Whoever writes an exercise can't approve it: 
 
 Each exercise earns 0–3 stars, so a day has at most 9. Stars reward spotting scams *and* recognising real messages. The streak rewards showing up. Stars never affect the streak, and there's no leaderboard.
 
-| Engine | 3 stars | 2 stars | 1 star | 0 stars |
+| Format | 3 stars | 2 stars | 1 star | 0 stars |
 | --- | --- | --- | --- | --- |
-| Spot the red flags, scam message | Said "scam", red-flag score 90% or more | Said "scam", 50–89% | Said "scam", under 50% | Said "real" |
-| Spot the red flags, real message | Said "real" | — | — | Said "scam" |
-| Real or fake, one question | Correct | — | — | Wrong |
-| Real or fake, three items | 3 correct | 2 correct | 1 correct | 0 correct |
-| What would you do next? | Best action | Safe but not the best | Risky | Dangerous |
+| Spot the red flags, text | All flags, no wrong guesses | All flags, some wrong guesses | Some flags | No flags |
+| Spot the red flags, image | All spots on the first Check | All spots by the second or third Check | Some spots | No spots |
+| Real or fake | Correct | — | — | Wrong |
+| Side by side | Correct | — | — | Wrong |
+| What would you do next? | No mistakes | One mistake | Two or more mistakes, at least one right tick | No right ticks |
 
-**Red-flag score.** Wrong taps count half against you. Guessing by tapping everything doesn't pay, but one mistake doesn't ruin the exercise either.
-
-```math
-\text{red-flag score} = \frac{\text{red flags found} - 0.5 \times \text{safe parts tapped}}{\text{total red flags}}
-```
-
-Example: an email with 5 red flags. The user finds 4 and taps 1 safe part. (4 − 0.5) ÷ 5 = 70%, so 2 stars.
-
-**What would you do next?** Every choice is labelled best, safe, risky or dangerous, with an explanation. Example: a text from "Lumo Bank" says there was a suspicious login and asks Anna to call a number.
-
-| Choice | Rating | Stars | Why |
-| --- | --- | --- | --- |
-| Call Lumo Bank on the number on the back of her card | Best | 3 | She checks with the real bank, using a number she already trusts |
-| Delete the message and do nothing | Safe | 2 | She's safe, but if it were real she'd miss it. Checking is better |
-| Reply "Is this really Lumo Bank?" | Risky | 1 | The scammer will say yes, and now knows her number is active |
-| Call the number in the message | Dangerous | 0 | That number goes straight to the scammer |
-
-In a two-step situation, the exercise gets the *lower* of the two steps' stars. In real life one dangerous step is enough to lose money.
+A mistake in *what would you do next?* is a right action left unticked or a wrong one ticked.
 
 **What the user sees**
 
-- Right after an exercise: the stars, a kind sentence (3 stars: "Well spotted!", 0 stars: "A tricky one. Here's what gave it away."), and the explanation of every part.
+- Right after an exercise: the explanation of every part, then a pop-up with the stars and a kind sentence, including at 0 stars.
 - After the daily set: today's stars out of 9 and the streak.
 - Weekly overview: stars per category over the last 7 days. The weakest category is highlighted, with a link to its guide.
 
 The scoring rules live in one shared server module with a unit test for every row of the tables above.
+
+### Prototype status
+
+Built: home screen, all formats, stars, the admin templates and hand-picked daily sets. Not yet built: profile, settings and info screens, Anna's card, guides, streaks, accounts, saved attempts, translations, the region picker and the automatic daily-set job.
 
 ## Guides and lessons
 
