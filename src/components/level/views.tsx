@@ -1,16 +1,15 @@
-import Image from 'next/image'
 import type { ReactNode } from 'react'
 
 import type { Platform } from '@/lib/exercises/options'
-import type { PlayableEmail, PlayableImage, PlayableLink, PlayableMessage, PlayableVideo } from '@/lib/exercises/types'
+import type { PlayableEmail, PlayableLink, PlayableMessage } from '@/lib/exercises/types'
 
 // `text` decides how each piece is drawn: plain, or split into tappable words in red-flags levels.
 export type RenderText = (segment: string, value: string) => ReactNode
 
-const plainText: RenderText = (_, value) => value
+export const plainText: RenderText = (_, value) => value
 
 // Tappable words need 48px of height each, so those lines sit further apart.
-const lines = (text: RenderText) => (text === plainText ? 'leading-loose' : 'leading-12')
+export const lines = (text: RenderText) => (text === plainText ? 'leading-loose' : 'leading-12')
 
 export function EmailView({ email, text = plainText }: { email: PlayableEmail; text?: RenderText }) {
   return (
@@ -54,7 +53,7 @@ export function ChatView({ message, text = plainText }: { message: PlayableMessa
 }
 
 // Line breaks after slashes only where possible: a domain split in two looks wrong even when it's real.
-function BreakableUrl({ url }: { url: string }) {
+export function BreakableUrl({ url }: { url: string }) {
   return url.split(/(?<=\/)/).map((part, i) => (
     <span key={i}>
       {part}
@@ -71,36 +70,5 @@ export function LinkView({ link, text = plainText }: { link: PlayableLink; text?
         {text === plainText ? <BreakableUrl url={link.url} /> : text('link.url', link.url)}
       </p>
     </article>
-  )
-}
-
-export function PictureView({ image, className = '' }: { image: PlayableImage; className?: string }) {
-  return (
-    <Image
-      src={image.url}
-      alt={image.alt}
-      width={image.width}
-      height={image.height}
-      sizes="(max-width: 1024px) 100vw, 1024px"
-      draggable={false}
-      className={`block h-auto w-full select-none ${className}`}
-    />
-  )
-}
-
-export function VideoView({ video, title }: { video: PlayableVideo; title: string }) {
-  if (video.kind === 'embed') {
-    return (
-      <iframe
-        src={video.src}
-        title={title}
-        allow="fullscreen; picture-in-picture"
-        referrerPolicy="strict-origin-when-cross-origin"
-        className="aspect-video w-full rounded-2xl bg-black"
-      />
-    )
-  }
-  return (
-    <video src={video.src} title={title} controls playsInline preload="metadata" className="aspect-video w-full rounded-2xl bg-black" />
   )
 }

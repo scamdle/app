@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { answerVerdict } from '@/app/(frontend)/level/[id]/actions'
 import type { LevelResult, Playable } from '@/lib/exercises/types'
 
-import { LinkView, PictureView, VideoView } from './views'
+import { LinkView } from './views'
 
 const CHOICES = [
   { value: 'fake', label: 'Fake', mark: '✕', style: 'border-bad text-bad' },
@@ -36,9 +36,7 @@ export function RealOrFake({ exercise, onFinish }: {
 
   return (
     <>
-      {content.kind === 'link' && <LinkView link={content} />}
-      {content.kind === 'image' && <div className="overflow-hidden rounded-2xl"><PictureView image={content.image} /></div>}
-      {content.kind === 'video' && <VideoView video={content.video} title={exercise.title} />}
+      <LinkView link={content} />
 
       <div className="mt-5 grid grid-cols-2 gap-4">
         {CHOICES.map((choice) => {

@@ -31,15 +31,8 @@ describe('exerciseProblems', () => {
   })
 
   it('rejects a format and medium that do not go together', () => {
-    expect(paths({ description: 'd', format: 'side-by-side', medium: 'email' })).toEqual(['medium'])
-    expect(paths({ description: 'd', format: 'what-next', medium: 'video' })).toEqual(['medium'])
-  })
-
-  it('requires dots with reasons on image flags', () => {
-    const base = { description: 'd', format: 'spot-red-flags', medium: 'image', image: 1 }
-    expect(paths({ ...base, dots: [] })).toEqual(['dots'])
-    expect(paths({ ...base, dots: [{ x: 1, y: 1, size: 'small', reason: '' }] })).toEqual(['dots'])
-    expect(paths({ ...base, dots: [{ x: 1, y: 1, size: 'small', reason: 'r' }] })).toEqual([])
+    expect(paths({ description: 'd', format: 'real-or-fake', medium: 'email' })).toEqual(['medium'])
+    expect(paths({ description: 'd', format: 'what-next', medium: 'link' })).toEqual(['medium'])
   })
 
   it('only allows SMS in what next', () => {
@@ -72,16 +65,9 @@ describe('exerciseProblems', () => {
     expect(paths(data)).toEqual(['options'])
   })
 
-  it('requires a verdict and https video in real or fake', () => {
-    const base = { description: 'd', format: 'real-or-fake', medium: 'video', answerReason: 'r' }
-    expect(paths({ ...base, verdict: 'fake', videoUrl: 'http://x.test/a.mp4' })).toEqual(['videoUrl'])
-    expect(paths({ ...base, verdict: 'fake', videoUrl: 'https://x.test/a.mp4' })).toEqual([])
-    expect(paths({ ...base, videoUrl: 'https://x.test/a.mp4' })).toEqual(['verdict'])
-  })
-
-  it('requires both items in side by side', () => {
-    const base = { description: 'd', format: 'side-by-side', medium: 'image', answerReason: 'r' }
-    expect(paths({ ...base, comparison: { realImage: 1 } })).toEqual(['comparison.fakeImage'])
-    expect(paths({ ...base, comparison: { realImage: 1, fakeImage: 2 } })).toEqual([])
+  it('requires a verdict and reason in real or fake', () => {
+    const base = { description: 'd', format: 'real-or-fake', medium: 'link', link: { url: 'https://x.test' } }
+    expect(paths({ ...base, verdict: 'fake', answerReason: 'r' })).toEqual([])
+    expect(paths({ ...base, answerReason: 'r' })).toEqual(['verdict'])
   })
 })

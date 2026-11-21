@@ -10,6 +10,9 @@ import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Exercises } from './collections/Exercises'
 import { DailySets } from './collections/DailySets'
+import { Scenarios } from './collections/Scenarios'
+import { Feedback } from './collections/Feedback'
+import { GameSettings } from './globals/GameSettings'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -21,7 +24,8 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Exercises, DailySets],
+  collections: [Users, Media, Exercises, Scenarios, DailySets, Feedback],
+  globals: [GameSettings],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {

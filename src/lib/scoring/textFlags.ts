@@ -59,18 +59,22 @@ export function scoreTextFlags(args: {
     const token = tokens[guess.segment]?.[guess.token]
     if (!token || seen.some((g) => same(g, guess))) continue
     seen.push(guess)
-    const flag = flagTokens.findIndex((hits) => hits.some((h) => same(h, guess)))
-    if (flag === -1) wrong.push(guess)
-    else found.add(flag)
+    // One tap can find several flags when they share a sentence.
+    const hit = flagTokens.flatMap((hits, i) => (hits.some((h) => same(h, guess)) ? [i] : []))
+    if (hit.length === 0) wrong.push(guess)
+    else hit.forEach((i) => found.add(i))
   }
 
   const finished = giveUp || isDone()
   const missed = flags.map((_, i) => i).filter((i) => !found.has(i))
-  const marks: TokenMark[] = [
-    ...[...found].flatMap((i) => flagTokens[i].map((h) => ({ ...h, state: 'found' as const }))),
-    ...wrong.map((g) => ({ ...g, state: 'wrong' as const })),
-    ...(finished ? missed.flatMap((i) => flagTokens[i].map((h) => ({ ...h, state: 'missed' as const }))) : []),
-  ]
+  // Each piece gets one mark. A piece holding a found and a missed flag shows as found.
+  const marks: TokenMark[] = []
+  const mark = (h: Guess, state: TokenMark['state']) => {
+    if (!marks.some((m) => same(m, h))) marks.push({ ...h, state })
+  }
+  for (const i of found) flagTokens[i].forEach((h) => mark(h, 'found'))
+  wrong.forEach((g) => mark(g, 'wrong'))
+  if (finished) missed.forEach((i) => flagTokens[i].forEach((h) => mark(h, 'missed')))
 
   return {
     found: [...found],
