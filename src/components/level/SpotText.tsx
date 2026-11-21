@@ -9,11 +9,11 @@ import { Button } from './Button'
 import type { RenderText } from './views'
 
 const WORD_STYLES: Record<TokenMark['state'] | 'idle' | 'checking', string> = {
-  idle: 'cursor-pointer outline-offset-1 hover:bg-sun/30 hover:outline-2 hover:outline-dashed hover:outline-navy',
+  idle: 'cursor-pointer underline decoration-mist decoration-dotted decoration-2 underline-offset-4 hover:bg-sun/30 hover:decoration-navy',
   checking: 'bg-mist',
-  found: 'bg-good-soft font-bold text-good underline decoration-2',
+  found: 'bg-good-soft font-bold text-good',
   wrong: 'bg-bad-soft text-bad line-through decoration-2',
-  missed: 'bg-miss-soft font-bold text-miss underline decoration-dashed decoration-2',
+  missed: 'bg-miss-soft font-bold text-miss outline-2 outline-dashed outline-miss',
 }
 
 const keyOf = (segment: string, token: number) => `${segment}:${token}`
@@ -64,23 +64,33 @@ export function SpotText<R extends SpotResponse>({ flagCount, maxWrong, check, o
     void send(false)
   }
 
+  // Inline spans rather than buttons, so a long sentence wraps like normal text and its
+  // highlight follows the lines. Role, tabIndex and keys give them button behaviour.
   const render: RenderText = (segment, value) =>
     tokenize(value).map((token) => {
       if (token.index === null) return token.text
       const key = keyOf(segment, token.index)
       const state = marks.get(key) ?? (checking.includes(key) ? 'checking' : 'idle')
       const settled = state !== 'idle'
+      const inactive = finished && !settled
       return (
-        <button
+        <span
           key={token.start}
-          type="button"
-          disabled={finished && !settled}
+          role="button"
+          tabIndex={inactive ? -1 : 0}
           aria-pressed={settled}
+          aria-disabled={inactive || undefined}
           onClick={() => tap(segment, token.index!)}
-          className={`relative rounded-sm px-[1px] text-left after:absolute after:inset-x-0 after:top-1/2 after:h-12 after:-translate-y-1/2 ${finished && !settled ? '' : WORD_STYLES[state]}`}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              tap(segment, token.index!)
+            }
+          }}
+          className={`rounded-md px-1 py-1 [box-decoration-break:clone] [-webkit-box-decoration-break:clone] ${inactive ? '' : WORD_STYLES[state]}`}
         >
           {token.text}
-        </button>
+        </span>
       )
     })
 

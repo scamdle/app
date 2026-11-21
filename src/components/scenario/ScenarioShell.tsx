@@ -170,7 +170,7 @@ export function ScenarioShell({ scenario, day, feedback }: {
       {phase === 'step2' && verdict?.step2.kind === 'flags' && (
         <>
           <p className="mb-5">
-            Find {verdict.step2.flagCount} red {verdict.step2.flagCount === 1 ? 'flag' : 'flags'}. Tap anything that looks suspicious
+            Find {verdict.step2.flagCount} red {verdict.step2.flagCount === 1 ? 'flag' : 'flags'}. Tap each sentence or web address that looks suspicious
             {scenario.landing ? `, in the ${scenario.content.kind === 'search' ? 'search result' : 'ad'} and on the page` : ''}. You can make {verdict.step2.maxWrong} wrong{' '}
             {verdict.step2.maxWrong === 1 ? 'guess' : 'guesses'}.
           </p>

@@ -75,7 +75,7 @@ Each exercise has a format (how it plays), a medium (what the player looks at) a
 
 | Format | Media | How it plays |
 | --- | --- | --- |
-| Spot the red flags | Email, link, SMS, WhatsApp, Messenger | Every word or link part can be tapped, like "inspect element". Each tap instantly shows right or wrong, with a live count such as 2/4. Correct taps are free. The editor sets how many wrong guesses end the level (default 3). |
+| Spot the red flags | Email, link, SMS, WhatsApp, Messenger | Every sentence can be tapped, and web and email addresses are their own tap even inside a sentence. (Until 21 November it was single words, which was too fiddly and confusing.) Each tap instantly shows right or wrong, with a live count such as 2/4. A sentence holding two flags finds both. Correct taps are free. The editor sets how many wrong guesses end the level (default 3). |
 | Real or fake | Link | One item and a big X or check mark. |
 | What would you do next? | Email, SMS | The message with a scenario beside it. The player ticks every right action and presses Check once. |
 
