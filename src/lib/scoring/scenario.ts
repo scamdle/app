@@ -34,5 +34,3 @@ export function scenarioPercent(steps: number[]): number {
   return Math.round((100 * sum) / 3)
 }
 
-// Rounded share of the total for one step, e.g. 0.5 → 17 (of 33).
-export const stepPercent = (points: number) => Math.round((100 * clamp(points)) / 3)

@@ -9,9 +9,12 @@ type Data = Record<string, unknown>
 const usesMedium = (...media: string[]) => (data: Data) => media.includes(data?.medium as string)
 const isVerdict = (verdict: 'real' | 'fake') => (data: Data) => data?.verdict === verdict
 
-const choices = (name: string, condition: (data: Data) => boolean, description: string): ArrayField => ({
+// `hidden` hides the whole list from the public API, not just the answers: only real
+// scenarios have "why is it real?" options, so even their texts would give the verdict away.
+const choices = (name: string, condition: (data: Data) => boolean, description: string, hidden = false): ArrayField => ({
   name,
   type: 'array',
+  ...(hidden ? { access: editorsOnly } : {}),
   labels: { singular: 'Option', plural: 'Options' },
   admin: { condition, description },
   fields: [
@@ -159,7 +162,7 @@ export const Scenarios: CollectionConfig = {
       defaultValue: 3,
       admin: { condition: isVerdict('fake'), description: 'How many wrong taps end step 2. Correct taps are free.' },
     },
-    choices('whyReal', isVerdict('real'), 'Step 2 for real ones: "Why is this real?" Tick every option that is a good reason.'),
+    choices('whyReal', isVerdict('real'), 'Step 2 for real ones: "Why is this real?" Tick every option that is a good reason.', true),
 
     // Step 3
     {

@@ -21,7 +21,6 @@ import type {
 } from '@/lib/exercises/types'
 import type { FeedbackForm as FeedbackFormData } from '@/lib/feedback'
 import { feedbackGiven, saveBestScore } from '@/lib/progress'
-import { stepPercent } from '@/lib/scoring/scenario'
 import type { Guess } from '@/lib/scoring/textFlags'
 
 import { Button } from '../level/Button'
@@ -118,7 +117,7 @@ export function ScenarioShell({ scenario, day, feedback }: {
     <main className="mx-auto max-w-5xl px-4 pt-4 pb-10">
       <header className="mb-2 flex items-center gap-4">
         {/* While the form is required, the way home is through it. */}
-        {!(phase === 'feedback' && feedback?.required) && (
+        {!(feedback?.required && askFeedback && (phase === 'summary' || phase === 'feedback')) && (
           <Link href="/" className="inline-flex min-h-12 shrink-0 items-center rounded-lg pr-1 font-bold whitespace-nowrap underline underline-offset-4">
             ← Home
           </Link>
@@ -172,7 +171,7 @@ export function ScenarioShell({ scenario, day, feedback }: {
         <>
           <p className="mb-5">
             Find {verdict.step2.flagCount} red {verdict.step2.flagCount === 1 ? 'flag' : 'flags'}. Tap anything that looks suspicious
-            {scenario.landing ? ', in the ad and on the page' : ''}. You can make {verdict.step2.maxWrong} wrong{' '}
+            {scenario.landing ? `, in the ${scenario.content.kind === 'search' ? 'search result' : 'ad'} and on the page` : ''}. You can make {verdict.step2.maxWrong} wrong{' '}
             {verdict.step2.maxWrong === 1 ? 'guess' : 'guesses'}.
           </p>
           <SpotText
@@ -241,11 +240,12 @@ export function ScenarioShell({ scenario, day, feedback }: {
             Your score
           </h2>
           <p className="mt-2 font-display text-7xl leading-none font-black text-navy">{summary.percent}%</p>
-          <ul className="mt-5 divide-y divide-mist">
+          <p className="mt-3">Each step counts for a third of your score.</p>
+          <ul className="mt-3 divide-y divide-mist">
             {summary.steps.map((points, i) => (
               <li key={i} className="flex justify-between gap-4 py-2">
                 <span>Step {i + 1}: {STEP_NAMES[i]}</span>
-                <strong className="whitespace-nowrap">{stepPercent(points)} of 33</strong>
+                <strong className="whitespace-nowrap">{Math.round(points * 100)}%</strong>
               </li>
             ))}
           </ul>
