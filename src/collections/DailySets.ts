@@ -7,7 +7,8 @@ export const DailySets: CollectionConfig = {
   admin: {
     useAsTitle: 'date',
     defaultColumns: ['date', 'region', 'exercises'],
-    description: 'Choose the 3 tasks for a date. If a date has no set, players get the most recent earlier one.',
+    description:
+      'Choose what players get on a date: 3 Exercises for 3-task mode, a Scenario for scenario mode, or both so either mode works. If a date has no set, players get the most recent earlier one.',
   },
   access: {
     // Players get today's set through the home screen, so upcoming sets stay private.
@@ -28,10 +29,23 @@ export const DailySets: CollectionConfig = {
       type: 'relationship',
       relationTo: 'exercises',
       hasMany: true,
-      required: true,
-      minRows: 3,
-      maxRows: 3,
       filterOptions: { status: { equals: 'published' } },
+      admin: { description: 'For 3-task mode: exactly 3.' },
+      validate: (value: unknown) => {
+        const count = Array.isArray(value) ? value.length : 0
+        return count === 0 || count === 3 ? true : 'Choose exactly 3 exercises, or none.'
+      },
+    },
+    {
+      name: 'scenario',
+      type: 'relationship',
+      relationTo: 'scenarios',
+      filterOptions: { status: { equals: 'published' } },
+      admin: { description: 'For scenario mode.' },
+      validate: (value: unknown, { siblingData }: { siblingData: Record<string, unknown> }) => {
+        const exercises = Array.isArray(siblingData?.exercises) ? siblingData.exercises.length : 0
+        return value || exercises > 0 ? true : 'Choose a scenario or 3 exercises.'
+      },
     },
   ],
 }

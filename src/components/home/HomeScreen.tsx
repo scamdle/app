@@ -8,7 +8,7 @@ import { Button } from '@/components/level/Button'
 import { Modal } from '@/components/level/Modal'
 import { Stars } from '@/components/level/Stars'
 import type { DailySetView } from '@/lib/exercises/types'
-import { starsForDay } from '@/lib/progress'
+import { scoresForDay, starsForDay } from '@/lib/progress'
 import type { Stars as StarCount } from '@/lib/scoring/types'
 import { dayKey } from '@/lib/dayKey'
 
@@ -37,6 +37,7 @@ export function HomeScreen() {
   const [failed, setFailed] = useState(false)
   const [set, setSet] = useState<DailySetView | null>(null)
   const [stars, setStars] = useState<Record<string, StarCount>>({})
+  const [scores, setScores] = useState<Record<string, number>>({})
   const [later, setLater] = useState<string | null>(null)
   const laterId = useId()
 
@@ -47,7 +48,10 @@ export function HomeScreen() {
       .then((daily) => {
         if (!active) return
         setSet(daily)
-        if (daily) setStars(starsForDay(daily.date))
+        if (daily) {
+          setStars(starsForDay(daily.date))
+          setScores(scoresForDay(daily.date))
+        }
         setLoaded(true)
       })
       .catch(() => {
@@ -90,7 +94,20 @@ export function HomeScreen() {
         <h1 className="font-display text-[clamp(3.5rem,18vw,4.5rem)] leading-none font-extrabold text-sun sm:text-8xl">Scamdle</h1>
         <p className="mt-3 min-h-9 text-2xl sm:text-4xl">{set && `Daily #${set.number} · ${formatDate(set.date)}`}</p>
 
-        {loaded && set && set.tasks.length > 0 && (
+        {loaded && set?.mode === 'scenario' && set.scenario && (
+          <div className="mt-10 flex w-full max-w-md flex-col items-center gap-3 sm:mt-14 lg:max-w-xl">
+            <p className="min-h-10 text-3xl font-bold">
+              {scores[set.scenario.id] !== undefined ? `Your best: ${scores[set.scenario.id]}%` : ''}
+            </p>
+            <Link
+              href={`/scenario/${set.scenario.id}?day=${set.date}`}
+              className="flex min-h-24 w-full items-center justify-center rounded-2xl border-[6px] border-sun bg-paper px-4 font-display text-4xl font-black [word-spacing:0.12em] text-navy hover:bg-[#fff6d4] sm:text-5xl lg:min-h-32 lg:text-6xl"
+            >
+              {scores[set.scenario.id] !== undefined ? 'Play again' : 'Today’s scenario'}
+            </Link>
+          </div>
+        )}
+        {loaded && set?.mode === 'three-tasks' && set.tasks.length > 0 && (
           <ol className="mt-10 grid w-full max-w-sm grid-cols-1 gap-7 sm:mt-14 sm:max-w-none sm:grid-cols-3 sm:gap-8">
             {set.tasks.map((task, i) => (
               <li key={task.id} className="flex flex-col items-center gap-3">
@@ -105,7 +122,7 @@ export function HomeScreen() {
             ))}
           </ol>
         )}
-        {loaded && !failed && (!set || set.tasks.length === 0) && <p className="mt-10 text-2xl">No tasks yet. Please come back soon.</p>}
+        {loaded && !failed && (!set || (set.mode === 'three-tasks' ? set.tasks.length === 0 : !set.scenario)) && <p className="mt-10 text-2xl">No tasks yet. Please come back soon.</p>}
         {failed && <p role="alert" className="mt-10 text-2xl">We couldn’t load today’s tasks. Please try again in a moment.</p>}
       </div>
 

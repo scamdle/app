@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
 import { optionStars, verdictStars } from './choices'
-import { imageDotStars, scoreImageDots } from './imageDots'
 import { scoreTextFlags, textFlagStars } from './textFlags'
 import { tokenize } from './tokenize'
 
@@ -75,55 +74,6 @@ describe('scoreTextFlags', () => {
   it('ignores token numbers that do not exist', () => {
     const score = scoreTextFlags({ segments, flags, guesses: [{ segment: 'nope', token: 0 }, { segment: 'body', token: 99 }], maxWrong: 3 })
     expect(score.wrong).toEqual([])
-  })
-})
-
-describe('image dot stars', () => {
-  it.each([
-    [2, 2, 1, 3],
-    [2, 2, 2, 2],
-    [2, 2, 3, 2],
-    [1, 2, 3, 1],
-    [0, 2, 3, 0],
-  ])('%i of %i dots after %i checks gives %i stars', (found, total, checks, stars) => {
-    expect(imageDotStars(found, total, checks)).toBe(stars)
-  })
-})
-
-describe('scoreImageDots', () => {
-  const dots = [
-    { x: 20, y: 20, size: 'medium' as const, reason: 'a' },
-    { x: 80, y: 80, size: 'small' as const, reason: 'b' },
-  ]
-
-  it('gives 3 stars when everything is found on the first Check', () => {
-    const score = scoreImageDots({ dots, aspect: 1, rounds: [[{ x: 21, y: 21 }, { x: 80, y: 81 }]] })
-    expect(score).toMatchObject({ finished: true, stars: 3, lastRound: [true, true] })
-  })
-
-  it('keeps earlier finds and allows up to 3 Checks', () => {
-    const miss = { x: 50, y: 50 }
-    const first = scoreImageDots({ dots, aspect: 1, rounds: [[{ x: 20, y: 20 }, miss]] })
-    expect(first).toMatchObject({ finished: false, lastRound: [true, false], found: [0] })
-    const last = scoreImageDots({ dots, aspect: 1, rounds: [[{ x: 20, y: 20 }, miss], [miss], [{ x: 80, y: 80 }]] })
-    expect(last).toMatchObject({ finished: true, stars: 2, checksUsed: 3 })
-  })
-
-  it('finishes after 3 Checks even with dots left', () => {
-    const miss = { x: 50, y: 50 }
-    const score = scoreImageDots({ dots, aspect: 1, rounds: [[miss, miss], [miss, miss], [miss, miss], [dots[0], dots[1]]] })
-    expect(score).toMatchObject({ finished: true, stars: 0, checksUsed: 3 })
-  })
-
-  it('accounts for image shape when measuring distance', () => {
-    const dot = [{ x: 50, y: 50, size: 'small' as const, reason: '' }]
-    expect(scoreImageDots({ dots: dot, aspect: 1, rounds: [[{ x: 50, y: 54 }]] }).found).toEqual([0])
-    expect(scoreImageDots({ dots: dot, aspect: 2, rounds: [[{ x: 50, y: 54 }]] }).found).toEqual([])
-  })
-
-  it('does not let extra circles count', () => {
-    const score = scoreImageDots({ dots, aspect: 1, rounds: [[{ x: 1, y: 1 }, { x: 2, y: 2 }, { x: 20, y: 20 }]] })
-    expect(score.found).toEqual([])
   })
 })
 

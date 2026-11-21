@@ -5,6 +5,7 @@ import { getPayload } from 'payload'
 
 import type { DailySetView } from '@/lib/exercises/types'
 import { DEFAULT_REGION } from '@/lib/regions'
+import { getGameSettings } from '@/lib/settings'
 
 // The browser sends its local date. Nobody on earth is more than 14 hours ahead of UTC,
 // so later dates can't be used to peek at upcoming sets.
@@ -16,12 +17,24 @@ export async function getDailySet(day: string): Promise<DailySetView | null> {
   const date = day > latest ? latest : day
 
   const payload = await getPayload({ config })
-  const where = { region: { equals: DEFAULT_REGION }, date: { less_than_equal: date } }
+  const { mode } = await getGameSettings()
+  // In scenario mode only sets with a scenario count, so an older 3-task-only set isn't picked.
+  const where = {
+    region: { equals: DEFAULT_REGION },
+    date: { less_than_equal: date },
+    ...(mode === 'scenario' ? { scenario: { exists: true } } : {}),
+  }
   const { docs, totalDocs } = await payload.find({ collection: 'daily-sets', where, sort: '-date', limit: 1, depth: 1 })
   const set = docs[0]
   if (!set) return null
 
+  if (mode === 'scenario') {
+    const scenario = typeof set.scenario === 'object' && set.scenario?.status === 'published' ? set.scenario : null
+    return { mode, date: set.date, number: totalDocs, scenario: scenario && { id: scenario.id, title: scenario.title } }
+  }
+
   return {
+    mode,
     date: set.date,
     number: totalDocs,
     tasks: (set.exercises ?? []).flatMap((exercise) =>

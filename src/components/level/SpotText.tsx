@@ -1,14 +1,12 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useRef, useState, type ReactNode } from 'react'
 
-import { guessWord } from '@/app/(frontend)/level/[id]/actions'
-import type { GuessResponse, LevelResult, Playable } from '@/lib/exercises/types'
 import type { Guess, TokenMark } from '@/lib/scoring/textFlags'
 import { tokenize } from '@/lib/scoring/tokenize'
 
 import { Button } from './Button'
-import { ChatView, EmailView, LinkView, type RenderText } from './views'
+import type { RenderText } from './views'
 
 const WORD_STYLES: Record<TokenMark['state'] | 'idle' | 'checking', string> = {
   idle: 'cursor-pointer outline-offset-1 hover:bg-sun/30 hover:outline-2 hover:outline-dashed hover:outline-navy',
@@ -20,31 +18,40 @@ const WORD_STYLES: Record<TokenMark['state'] | 'idle' | 'checking', string> = {
 
 const keyOf = (segment: string, token: number) => `${segment}:${token}`
 
-export function SpotText({ exercise, onFinish }: {
-  exercise: Extract<Playable, { format: 'spot-text' }>
-  onFinish: (result: LevelResult) => void
+// What the server says after each tap. `done` is true once the level is over.
+export type SpotResponse = { found: number; wrong: number; marks: TokenMark[]; done: boolean }
+
+// Tap-the-words game, shared by 3-task levels and scenario step 2. The caller draws the
+// content with the `text` renderer and decides what to send to the server.
+export function SpotText<R extends SpotResponse>({ flagCount, maxWrong, check, onDone, children }: {
+  flagCount: number
+  maxWrong: number
+  check: (guesses: Guess[], giveUp: boolean) => Promise<R>
+  onDone: (response: R, guesses: Guess[]) => void
+  children: (text: RenderText) => ReactNode
 }) {
   const guesses = useRef<Guess[]>([])
-  const [latest, setLatest] = useState<GuessResponse | null>(null)
+  const [latest, setLatest] = useState<R | null>(null)
   const [checking, setChecking] = useState<string[]>([])
   const [error, setError] = useState(false)
-  const finished = Boolean(latest?.result)
+  const finished = Boolean(latest?.done)
 
   const send = useCallback(
     async (giveUp: boolean) => {
       try {
         // Server Actions run one at a time and every call replays all guesses, so the newest answer is complete.
-        const response = await guessWord(exercise.id, [...guesses.current], giveUp)
-        setLatest((current) => (current?.result ? current : response))
+        const sent = [...guesses.current]
+        const response = await check(sent, giveUp)
+        setLatest((current) => (current?.done ? current : response))
         setChecking([])
         setError(false)
-        if (response.result) onFinish(response.result)
+        if (response.done) onDone(response, sent)
       } catch {
         setChecking([])
         setError(true)
       }
     },
-    [exercise.id, onFinish],
+    [check, onDone],
   )
 
   const marks = new Map((latest?.marks ?? []).map((mark) => [keyOf(mark.segment, mark.token), mark.state]))
@@ -78,21 +85,18 @@ export function SpotText({ exercise, onFinish }: {
     })
 
   const found = latest?.found ?? 0
-  const wrongLeft = exercise.maxWrong - (latest?.wrong ?? 0)
-  const { content } = exercise
+  const wrongLeft = maxWrong - (latest?.wrong ?? 0)
 
   return (
     <>
       <div aria-live="polite" className="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 text-xl font-bold">
         <span>
-          Red flags found: <span className="text-sun">{found}/{exercise.flagCount}</span>
+          Red flags found: <span className="text-sun">{found}/{flagCount}</span>
         </span>
         <span>Wrong guesses left: <span className="text-sun">{wrongLeft}</span></span>
       </div>
 
-      {content.kind === 'email' && <EmailView email={content} text={render} />}
-      {content.kind === 'message' && <ChatView message={content} text={render} />}
-      {content.kind === 'link' && <LinkView link={content} text={render} />}
+      {children(render)}
 
       {error && <p role="alert" className="mt-3 font-bold text-sun">Something went wrong checking that. Please tap again.</p>}
 

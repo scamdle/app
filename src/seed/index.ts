@@ -1,16 +1,14 @@
-// Fills a development database with one fictional sample per format and medium, plus today's
-// daily set. Run with `npm run seed`. Samples are titled "[Sample] ..." and replaced on each run.
+// Fills a development database with fictional samples: one per exercise format and medium
+// (3-task mode), four scenarios (scenario mode), and today's daily set for both modes.
+// Run with `npm run seed`. Samples are titled "[Sample] ..." and replaced on each run.
 import config from '@payload-config'
 import { getPayload } from 'payload'
-import sharp from 'sharp'
 
 import { dayKey } from '@/lib/dayKey'
 import { DEFAULT_REGION } from '@/lib/regions'
-import type { Exercise } from '@/payload-types'
+import type { Exercise, Scenario } from '@/payload-types'
 
 const PREFIX = '[Sample] '
-const VIDEO_A = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4'
-const VIDEO_B = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/friday.mp4'
 
 // This publishes samples and replaces today's daily set, so it must never touch production.
 // Naming the host in .env is a deliberate step that can't happen by accident.
@@ -21,41 +19,21 @@ if (process.env.VERCEL || process.env.SEED_DATABASE_HOST !== host) {
 
 const payload = await getPayload({ config })
 
-async function uploadSvg(name: string, alt: string, svg: string): Promise<number> {
-  const data = await sharp(Buffer.from(svg)).png().toBuffer()
-  const media = await payload.create({
-    collection: 'media',
-    data: { alt },
-    file: { data, mimetype: 'image/png', name: `${name}.png`, size: data.length },
-  })
-  return media.id
-}
-
-const loginScreen = (address: string, button: string) => `
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800">
-  <rect width="1200" height="800" fill="#e8eef5"/>
-  <rect x="60" y="40" width="1080" height="70" rx="14" fill="#ffffff"/>
-  <text x="90" y="88" font-family="Arial" font-size="32" fill="#333333">${address}</text>
-  <text x="600" y="210" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="64" fill="#14507a">Lumo Bank</text>
-  <rect x="300" y="280" width="600" height="70" rx="8" fill="#ffffff" stroke="#999999"/>
-  <text x="320" y="326" font-family="Arial" font-size="30" fill="#777777">Enter your card number</text>
-  <rect x="300" y="380" width="600" height="70" rx="8" fill="#ffffff" stroke="#999999"/>
-  <text x="320" y="426" font-family="Arial" font-size="30" fill="#777777">Enter your PIN code</text>
-  <rect x="300" y="490" width="600" height="84" rx="8" fill="#c4262e"/>
-  <text x="600" y="545" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="34" fill="#ffffff">${button}</text>
-</svg>`
-
 const samples = await payload.find({ collection: 'exercises', where: { title: { like: PREFIX } }, limit: 100, depth: 0 })
-await payload.delete({ collection: 'daily-sets', where: { exercises: { in: samples.docs.map((d) => d.id) } } })
+const sampleScenarios = await payload.find({ collection: 'scenarios', where: { title: { like: PREFIX } }, limit: 100, depth: 0 })
+await payload.delete({
+  collection: 'daily-sets',
+  where: {
+    or: [
+      { exercises: { in: samples.docs.map((d) => d.id) } },
+      { scenario: { in: sampleScenarios.docs.map((d) => d.id) } },
+    ],
+  },
+})
 await payload.delete({ collection: 'exercises', where: { title: { like: PREFIX } } })
+await payload.delete({ collection: 'scenarios', where: { title: { like: PREFIX } } })
+// Image samples from older seeds.
 await payload.delete({ collection: 'media', where: { alt: { like: 'Sample:' } } })
-
-const fakeImage = await uploadSvg(
-  'lumo-login-a',
-  'Sample: a login page for Lumo Bank',
-  loginScreen('lumobank-veilig.com/login', 'LOG IN NOW OR LOSE ACCESS'),
-)
-const realImage = await uploadSvg('lumo-login-b', 'Sample: a login page for Lumo Bank', loginScreen('lumobank.com/login', 'Log in'))
 
 const email = {
   fromName: 'Lumo Bank Security',
@@ -157,18 +135,6 @@ const list: Sample[] = [
     flags: [{ text: 'secure-login.net', reason: 'The real address is what comes right before the first “/”. Here that’s secure-login.net.' }],
   },
   {
-    title: 'A strange login page',
-    description: 'Anna followed a link and landed on this page.',
-    format: 'spot-red-flags',
-    medium: 'image',
-    image: fakeImage,
-    dots: [
-      { x: 28, y: 9.5, size: 'large', reason: 'The address isn’t the bank’s real one.' },
-      { x: 50, y: 41, size: 'medium', reason: 'A bank’s login page doesn’t ask for your full card number.' },
-      { x: 50, y: 66, size: 'medium', reason: 'Threats and capital letters are meant to rush you.' },
-    ],
-  },
-  {
     title: 'Real or fake link?',
     description: 'Anna’s real bank is Lumo Bank.',
     format: 'real-or-fake',
@@ -176,40 +142,6 @@ const list: Sample[] = [
     link: { context: 'On the back of Anna’s bank card', url: 'https://lumobank.com/help' },
     verdict: 'real',
     answerReason: 'lumobank.com comes right before the first “/”, and it’s printed on her own card.',
-  },
-  {
-    title: 'Real or fake page?',
-    description: 'Does this page look right?',
-    format: 'real-or-fake',
-    medium: 'image',
-    image: fakeImage,
-    verdict: 'fake',
-    answerReason: 'The address and the threatening button both give it away.',
-  },
-  {
-    title: 'Real or fake video?',
-    description: 'A sample clip, to try the video level.',
-    format: 'real-or-fake',
-    medium: 'video',
-    videoUrl: VIDEO_A,
-    verdict: 'real',
-    answerReason: 'This sample is a real film clip.',
-  },
-  {
-    title: 'Which page is real?',
-    description: 'One of these is Lumo Bank’s real login page.',
-    format: 'side-by-side',
-    medium: 'image',
-    comparison: { realImage, fakeImage },
-    answerReason: 'The real page has the bank’s own address and a calm button.',
-  },
-  {
-    title: 'Which clip is real?',
-    description: 'Sample clips, to try the side-by-side video level.',
-    format: 'side-by-side',
-    medium: 'video',
-    comparison: { realVideoUrl: VIDEO_A, fakeVideoUrl: VIDEO_B },
-    answerReason: 'In this sample, the flower clip counts as the real one.',
   },
   {
     title: 'What would you do? (email)',
@@ -249,13 +181,144 @@ for (const { title, ...sample } of list) {
   ids.push({ id: created.id, title: created.title })
 }
 
+type ScenarioSample = Omit<Scenario, 'id' | 'updatedAt' | 'createdAt' | 'status' | 'region' | 'title'> & { title: string }
+
+const scenarios: ScenarioSample[] = [
+  {
+    title: 'A message from the bank',
+    description: 'Anna got this email from “her bank” this morning.',
+    medium: 'email',
+    email,
+    verdict: 'fake',
+    verdictReason: 'The address only looks like Lumo Bank’s, it rushes her, and it asks for her PIN. No real bank ever does that.',
+    maxWrongGuesses: 3,
+    flags: [
+      { text: 'lumobank-veilig.com', reason: 'This is not the bank’s real address, even though the name is in it.' },
+      { text: 'within 24 hours', reason: 'Scammers rush you so you don’t stop and think.' },
+      { text: 'Dear customer', reason: 'Your bank knows your name.' },
+      { text: 'card PIN', reason: 'No real bank ever asks for your PIN.' },
+    ],
+    nextPrompt: 'What should Anna do next?',
+    nextOptions: [
+      { text: 'Call Lumo Bank on the number on her card', isCorrect: true, explanation: 'She checks using a number she already trusts.' },
+      { text: 'Delete the email', isCorrect: true, explanation: 'Nothing is lost: a real problem would reach her another way.' },
+      { text: 'Click the link to check', isCorrect: false, explanation: 'The link goes to the scammer’s page.' },
+      { text: 'Reply with her PIN', isCorrect: false, explanation: 'Never share your PIN with anyone.' },
+    ],
+  },
+  {
+    title: 'A login code',
+    description: 'Anna is logging in to her online bank on her computer. A moment later this text arrives.',
+    medium: 'message',
+    message: {
+      platform: 'sms',
+      sender: 'Lumo Bank',
+      bubbles: [{ text: 'Your Lumo Bank login code is 482913. Never share this code with anyone, not even with us.' }],
+    },
+    verdict: 'real',
+    verdictReason: 'Anna asked for this code herself a moment ago, and the text asks for nothing: no link, no call, no reply.',
+    whyReal: [
+      { text: 'Anna asked for a code herself just now', isCorrect: true, explanation: 'It arrived because of something she did, which a scammer can’t fake.' },
+      { text: 'It doesn’t ask her to click, call or reply', isCorrect: true, explanation: 'It just gives information. Scams always want you to do something.' },
+      { text: 'The sender is “Lumo Bank”, not a phone number', isCorrect: false, explanation: 'Sender names can be faked, so this proves nothing on its own.' },
+      { text: 'It looks professional', isCorrect: false, explanation: 'Scammers can make messages look just as neat.' },
+    ],
+    nextPrompt: 'What should Anna do with the code?',
+    nextOptions: [
+      { text: 'Type it into the bank website she opened herself', isCorrect: true, explanation: 'That is what the code is for.' },
+      { text: 'Read it out to a caller who says he is from the bank', isCorrect: false, explanation: 'Never: with the code, the caller can log in as Anna.' },
+      { text: 'Forward it to her son to be safe', isCorrect: false, explanation: 'The code should stay with her. Nobody else needs it.' },
+    ],
+  },
+  {
+    title: 'A bargain on Facebook',
+    description: 'Anna is scrolling Facebook and sees this ad. She does need new winter boots.',
+    medium: 'ad',
+    ad: {
+      platform: 'facebook',
+      pageName: 'Nordic Shoe Outlet',
+      text: 'Closing down sale! All winter boots -80%. Last day today, only a few pairs left!',
+      headline: 'Leather winter boots from 19,99 €',
+      displayUrl: 'nordic-shoes-outlet.shop',
+      buttonText: 'Shop now',
+    },
+    landing: {
+      url: 'https://nordic-shoes-outlet.shop/sale',
+      siteName: 'Nordic Shoe Outlet',
+      headline: 'Closing down! -80% on everything',
+      body: 'Leather winter boots: 19,99 € (was 129,99 €)\nOnly 2 left in your size!\nOffer ends in 09:59\nPayment by bank transfer only',
+      buttonText: 'Pay now',
+    },
+    verdict: 'fake',
+    verdictReason: 'Prices this low, a ticking clock and “bank transfer only” are classic signs of a fake shop. Money sent by bank transfer is very hard to get back.',
+    maxWrongGuesses: 3,
+    flags: [
+      { text: '-80%', reason: 'A price far below every other shop is too good to be true.' },
+      { text: 'Only 2 left', reason: 'Made-up shortage to make you hurry.' },
+      { text: 'Offer ends in', reason: 'A countdown leaves you no time to check the shop.' },
+      { text: 'bank transfer only', reason: 'Real shops offer card or PayPal, which protect the buyer.' },
+    ],
+    nextPrompt: 'How can Anna check this shop before she pays?',
+    nextOptions: [
+      { text: 'Search the shop’s name with the word “reviews”, e.g. on Trustpilot', isCorrect: true, explanation: 'Other buyers often warn about fake shops.' },
+      { text: 'Look for a real address, phone number and company details', isCorrect: true, explanation: 'Fake shops usually hide who is behind them.' },
+      { text: 'Pay quickly before the offer ends', isCorrect: false, explanation: 'The clock is there to stop her checking.' },
+      { text: 'Pay by bank transfer because it’s the only option', isCorrect: false, explanation: 'If a shop only takes bank transfer, walk away.' },
+    ],
+  },
+  {
+    title: 'Looking for the bank',
+    description: 'Anna wants to log in to her online bank, so she searches for it.',
+    medium: 'search',
+    search: {
+      query: 'lumo bank login',
+      sponsored: true,
+      title: 'Lumo Bank – Log in to your online bank',
+      displayUrl: 'https://lumo-bank-login.help',
+      snippet: 'Official login page. Log in quickly with your card number and PIN code.',
+    },
+    landing: {
+      url: 'https://lumo-bank-login.help/login',
+      siteName: 'Lumo Bank',
+      headline: 'Log in to Lumo Bank',
+      body: 'Card number: ________\nPIN code: ________\nConfirm your details within 10 minutes or your account will be locked.',
+      buttonText: 'Log in',
+    },
+    verdict: 'fake',
+    verdictReason: 'Anyone can pay to appear at the top of a search as “Sponsored”. The address isn’t lumobank.com, and a bank never asks for your PIN online.',
+    maxWrongGuesses: 3,
+    flags: [
+      { text: 'Sponsored', reason: 'Scammers pay to appear above the real bank. Look past the ads.' },
+      { text: 'lumo-bank-login.help', reason: 'The bank’s real address is lumobank.com.' },
+      { text: 'PIN code', reason: 'A bank never asks for your PIN on a website.' },
+      { text: 'within 10 minutes', reason: 'Threats and deadlines are meant to rush you.' },
+    ],
+    nextPrompt: 'How should Anna get to her bank safely?',
+    nextOptions: [
+      { text: 'Type lumobank.com herself, or use a saved bookmark', isCorrect: true, explanation: 'Then she always lands on the real site.' },
+      { text: 'Scroll past the “Sponsored” results to the bank’s own site', isCorrect: true, explanation: 'The real bank is usually the first result that isn’t an ad.' },
+      { text: 'Enter her card number to see if the page works', isCorrect: false, explanation: 'The scammer gets her details the moment she types them.' },
+    ],
+  },
+]
+
+const scenarioIds: { id: number; title: string }[] = []
+for (const { title, ...sample } of scenarios) {
+  const created = await payload.create({
+    collection: 'scenarios',
+    data: { ...sample, title: `${PREFIX}${title}`, region: DEFAULT_REGION, status: 'published' },
+  })
+  scenarioIds.push({ id: created.id, title: created.title })
+}
+
 const date = dayKey(new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone)
 await payload.delete({ collection: 'daily-sets', where: { date: { equals: date }, region: { equals: DEFAULT_REGION } } })
 await payload.create({
   collection: 'daily-sets',
-  data: { date, region: DEFAULT_REGION, exercises: [ids[0].id, ids[5].id, ids[12].id] },
+  data: { date, region: DEFAULT_REGION, exercises: [ids[0].id, ids[5].id, ids[7].id], scenario: scenarioIds[2].id },
 })
 
 for (const { id, title } of ids) payload.logger.info(`/level/${id}  ${title}`)
+for (const { id, title } of scenarioIds) payload.logger.info(`/scenario/${id}  ${title}`)
 payload.logger.info(`Daily set created for ${date}`)
 process.exit(0)

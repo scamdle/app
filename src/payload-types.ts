@@ -70,7 +70,9 @@ export interface Config {
     users: User;
     media: Media;
     exercises: Exercise;
+    scenarios: Scenario;
     'daily-sets': DailySet;
+    feedback: Feedback;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -81,7 +83,9 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     exercises: ExercisesSelect<false> | ExercisesSelect<true>;
+    scenarios: ScenariosSelect<false> | ScenariosSelect<true>;
     'daily-sets': DailySetsSelect<false> | DailySetsSelect<true>;
+    feedback: FeedbackSelect<false> | FeedbackSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -91,8 +95,12 @@ export interface Config {
     defaultIDType: number;
   };
   fallbackLocale: null;
-  globals: {};
-  globalsSelect: {};
+  globals: {
+    'game-settings': GameSetting;
+  };
+  globalsSelect: {
+    'game-settings': GameSettingsSelect<false> | GameSettingsSelect<true>;
+  };
   locale: null;
   widgets: {
     collections: CollectionsWidget;
@@ -168,6 +176,8 @@ export interface Media {
   focalY?: number | null;
 }
 /**
+ * Used when Game settings → Mode is "3 separate tasks". Scenario mode uses Scenarios instead.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "exercises".
  */
@@ -181,8 +191,8 @@ export interface Exercise {
    * The situation, e.g. "Anna got this email this morning." How to play is added automatically.
    */
   description?: string | null;
-  format: 'spot-red-flags' | 'real-or-fake' | 'side-by-side' | 'what-next';
-  medium: 'email' | 'message' | 'link' | 'image' | 'video';
+  format: 'spot-red-flags' | 'real-or-fake' | 'what-next';
+  medium: 'email' | 'message' | 'link';
   /**
    * Which players get this exercise.
    */
@@ -217,23 +227,6 @@ export interface Exercise {
     url?: string | null;
   };
   /**
-   * Text in the picture must be readable on a phone, so use phone-sized screenshots. Give the file a neutral name and alt text: players can see both.
-   */
-  image?: (number | null) | Media;
-  /**
-   * A YouTube or Vimeo link, or a direct link to a video file.
-   */
-  videoUrl?: string | null;
-  /**
-   * The game decides which one appears on which side. Give files neutral names: players can see them.
-   */
-  comparison?: {
-    realImage?: (number | null) | Media;
-    fakeImage?: (number | null) | Media;
-    realVideoUrl?: string | null;
-    fakeVideoUrl?: string | null;
-  };
-  /**
    * Copy the exact text from the message above, then explain why it is suspicious.
    */
   flags?:
@@ -247,15 +240,6 @@ export interface Exercise {
    * How many wrong taps end the level. Correct taps are free.
    */
   maxWrongGuesses?: number | null;
-  dots?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
   verdict?: ('real' | 'fake') | null;
   /**
    * Shown after the player answers.
@@ -299,7 +283,187 @@ export interface Exercise {
   createdAt: string;
 }
 /**
- * Choose the 3 tasks for a date. If a date has no set, players get the most recent earlier one.
+ * Used when Game settings → Mode is "1 scenario in 3 steps". Pick one per day in Daily sets.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "scenarios".
+ */
+export interface Scenario {
+  id: number;
+  /**
+   * Shown to the player before the scenario starts.
+   */
+  title: string;
+  /**
+   * The situation, e.g. "Anna was scrolling Facebook and saw this ad." How to play is added automatically.
+   */
+  description?: string | null;
+  medium: 'email' | 'message' | 'ad' | 'search';
+  region: 'all' | 'ee' | 'nl' | 'de' | 'pt' | 'be';
+  email?: {
+    fromName?: string | null;
+    fromAddress?: string | null;
+    subject?: string | null;
+    body?: string | null;
+  };
+  message?: {
+    platform?: ('sms' | 'whatsapp' | 'messenger') | null;
+    /**
+     * The name or number shown at the top of the chat.
+     */
+    sender?: string | null;
+    bubbles?:
+      | {
+          text: string;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  /**
+   * Drawn like a sponsored post in a social media feed. "Sponsored" is added automatically.
+   */
+  ad?: {
+    platform?: ('facebook' | 'instagram') | null;
+    /**
+     * The page that posted the ad.
+     */
+    pageName?: string | null;
+    /**
+     * The post text above the picture area.
+     */
+    text?: string | null;
+    /**
+     * The bold line under the picture area, e.g. "-80% today only".
+     */
+    headline?: string | null;
+    /**
+     * The address shown on the ad, e.g. SHOP-DEALS.NET
+     */
+    displayUrl?: string | null;
+    /**
+     * e.g. Shop now
+     */
+    buttonText?: string | null;
+  };
+  /**
+   * Drawn like one result on a search page.
+   */
+  search?: {
+    /**
+     * What Anna typed into the search box.
+     */
+    query?: string | null;
+    /**
+     * Shows the "Sponsored" label above the result.
+     */
+    sponsored?: boolean | null;
+    title?: string | null;
+    /**
+     * The address shown above the title.
+     */
+    displayUrl?: string | null;
+    /**
+     * The short text under the title.
+     */
+    snippet?: string | null;
+  };
+  /**
+   * The page Anna lands on after clicking. Shown from step 2, and its words can be red flags too.
+   */
+  landing?: {
+    /**
+     * Shown in the address bar.
+     */
+    url?: string | null;
+    siteName?: string | null;
+    headline?: string | null;
+    /**
+     * Each line becomes its own line on the page, e.g. prices, "Only 2 left!".
+     */
+    body?: string | null;
+    /**
+     * e.g. Pay now
+     */
+    buttonText?: string | null;
+  };
+  /**
+   * Step 1: players guess this. If they get it wrong they only hear the answer, not why.
+   */
+  verdict?: ('real' | 'fake') | null;
+  /**
+   * Why it is real or fake. Shown on the summary at the end.
+   */
+  verdictReason?: string | null;
+  /**
+   * Step 2 for fakes: copy the exact text from the message (or landing page), then explain why it is suspicious.
+   */
+  flags?:
+    | {
+        text: string;
+        reason: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * How many wrong taps end step 2. Correct taps are free.
+   */
+  maxWrongGuesses?: number | null;
+  /**
+   * Step 2 for real ones: "Why is this real?" Tick every option that is a good reason.
+   */
+  whyReal?:
+    | {
+        text: string;
+        isCorrect?: boolean | null;
+        /**
+         * Shown after the player checks.
+         */
+        explanation?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Step 3 question, e.g. "How can Anna check this shop is real before paying?"
+   */
+  nextPrompt?: string | null;
+  /**
+   * Step 3 options. Tick every option that is correct.
+   */
+  nextOptions?:
+    | {
+        text: string;
+        isCorrect?: boolean | null;
+        /**
+         * Shown after the player checks.
+         */
+        explanation?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Optional lesson shown on the summary at the end.
+   */
+  explanation?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  status: 'draft' | 'in-review' | 'published';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Choose what players get on a date: 3 Exercises for 3-task mode, a Scenario for scenario mode, or both so either mode works. If a date has no set, players get the most recent earlier one.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "daily-sets".
@@ -311,7 +475,50 @@ export interface DailySet {
    */
   date: string;
   region: 'all' | 'ee' | 'nl' | 'de' | 'pt' | 'be';
-  exercises: (number | Exercise)[];
+  /**
+   * For 3-task mode: exactly 3.
+   */
+  exercises?: (number | Exercise)[] | null;
+  /**
+   * For scenario mode.
+   */
+  scenario?: (number | null) | Scenario;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Anonymous answers from players. No names, emails or IP addresses are stored.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "feedback".
+ */
+export interface Feedback {
+  id: number;
+  day: string;
+  region?: ('all' | 'ee' | 'nl' | 'de' | 'pt' | 'be') | null;
+  scenario?: (number | null) | Scenario;
+  /**
+   * Score on the scenario, worked out by the server.
+   */
+  percent?: number | null;
+  ageGroup: string;
+  /**
+   * Question key → answer from 1 to 5.
+   */
+  answers:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  comment?: string | null;
+  /**
+   * A random id kept on the player’s device, so one person’s days can be linked without knowing who they are.
+   */
+  deviceId: string;
   updatedAt: string;
   createdAt: string;
 }
@@ -352,8 +559,16 @@ export interface PayloadLockedDocument {
         value: number | Exercise;
       } | null)
     | ({
+        relationTo: 'scenarios';
+        value: number | Scenario;
+      } | null)
+    | ({
         relationTo: 'daily-sets';
         value: number | DailySet;
+      } | null)
+    | ({
+        relationTo: 'feedback';
+        value: number | Feedback;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -475,16 +690,6 @@ export interface ExercisesSelect<T extends boolean = true> {
         context?: T;
         url?: T;
       };
-  image?: T;
-  videoUrl?: T;
-  comparison?:
-    | T
-    | {
-        realImage?: T;
-        fakeImage?: T;
-        realVideoUrl?: T;
-        fakeVideoUrl?: T;
-      };
   flags?:
     | T
     | {
@@ -493,11 +698,99 @@ export interface ExercisesSelect<T extends boolean = true> {
         id?: T;
       };
   maxWrongGuesses?: T;
-  dots?: T;
   verdict?: T;
   answerReason?: T;
   scenario?: T;
   options?:
+    | T
+    | {
+        text?: T;
+        isCorrect?: T;
+        explanation?: T;
+        id?: T;
+      };
+  explanation?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "scenarios_select".
+ */
+export interface ScenariosSelect<T extends boolean = true> {
+  title?: T;
+  description?: T;
+  medium?: T;
+  region?: T;
+  email?:
+    | T
+    | {
+        fromName?: T;
+        fromAddress?: T;
+        subject?: T;
+        body?: T;
+      };
+  message?:
+    | T
+    | {
+        platform?: T;
+        sender?: T;
+        bubbles?:
+          | T
+          | {
+              text?: T;
+              id?: T;
+            };
+      };
+  ad?:
+    | T
+    | {
+        platform?: T;
+        pageName?: T;
+        text?: T;
+        headline?: T;
+        displayUrl?: T;
+        buttonText?: T;
+      };
+  search?:
+    | T
+    | {
+        query?: T;
+        sponsored?: T;
+        title?: T;
+        displayUrl?: T;
+        snippet?: T;
+      };
+  landing?:
+    | T
+    | {
+        url?: T;
+        siteName?: T;
+        headline?: T;
+        body?: T;
+        buttonText?: T;
+      };
+  verdict?: T;
+  verdictReason?: T;
+  flags?:
+    | T
+    | {
+        text?: T;
+        reason?: T;
+        id?: T;
+      };
+  maxWrongGuesses?: T;
+  whyReal?:
+    | T
+    | {
+        text?: T;
+        isCorrect?: T;
+        explanation?: T;
+        id?: T;
+      };
+  nextPrompt?: T;
+  nextOptions?:
     | T
     | {
         text?: T;
@@ -518,6 +811,23 @@ export interface DailySetsSelect<T extends boolean = true> {
   date?: T;
   region?: T;
   exercises?: T;
+  scenario?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "feedback_select".
+ */
+export interface FeedbackSelect<T extends boolean = true> {
+  day?: T;
+  region?: T;
+  scenario?: T;
+  percent?: T;
+  ageGroup?: T;
+  answers?: T;
+  comment?: T;
+  deviceId?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -560,6 +870,90 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   batch?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * Switches that change the game for every player.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "game-settings".
+ */
+export interface GameSetting {
+  id: number;
+  /**
+   * 3 separate tasks: each daily set uses its 3 Exercises. 1 scenario in 3 steps: each daily set uses its Scenario (real or fake, back it up, what next).
+   */
+  mode: 'three-tasks' | 'scenario';
+  feedbackEnabled?: boolean | null;
+  /**
+   * On for user testing. Turn it off later and players get a Skip button.
+   */
+  feedbackRequired?: boolean | null;
+  /**
+   * Asked first. Changing a value later splits old and new answers apart, so prefer editing labels.
+   */
+  ageGroups?:
+    | {
+        label: string;
+        /**
+         * Saved with each answer, e.g. 65-74.
+         */
+        value: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Scale questions are answered 1 to 5. A comment question is optional free text; only the first one is used.
+   */
+  questions?:
+    | {
+        /**
+         * Short id saved with answers, e.g. confidence. Keep it when rewording.
+         */
+        key: string;
+        type: 'scale' | 'comment';
+        text: string;
+        /**
+         * Shown under 1
+         */
+        lowLabel?: string | null;
+        /**
+         * Shown under 5
+         */
+        highLabel?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "game-settings_select".
+ */
+export interface GameSettingsSelect<T extends boolean = true> {
+  mode?: T;
+  feedbackEnabled?: T;
+  feedbackRequired?: T;
+  ageGroups?:
+    | T
+    | {
+        label?: T;
+        value?: T;
+        id?: T;
+      };
+  questions?:
+    | T
+    | {
+        key?: T;
+        type?: T;
+        text?: T;
+        lowLabel?: T;
+        highLabel?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

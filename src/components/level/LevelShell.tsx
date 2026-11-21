@@ -2,20 +2,21 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useId, useState } from 'react'
+import { useCallback, useId, useState } from 'react'
 
+import { guessWord } from '@/app/(frontend)/level/[id]/actions'
 import type { LevelResult, Playable } from '@/lib/exercises/types'
+import type { Guess } from '@/lib/scoring/textFlags'
 import { saveBestStars } from '@/lib/progress'
 
 import { Button } from './Button'
 import { howToPlay } from './howTo'
 import { Modal } from './Modal'
 import { Results } from './Results'
-import { SideBySide } from './SideBySide'
 import { RealOrFake } from './RealOrFake'
-import { SpotImage } from './SpotImage'
 import { SpotText } from './SpotText'
 import { Stars } from './Stars'
+import { ChatView, EmailView, LinkView } from './views'
 import { WhatNext } from './WhatNext'
 
 const PRAISE = [
@@ -32,10 +33,19 @@ export function LevelShell({ exercise, day }: { exercise: Playable; day: string 
   const [phase, setPhase] = useState<'intro' | 'play' | 'stars'>('intro')
   const [result, setResult] = useState<LevelResult | null>(null)
 
-  const finish = (levelResult: LevelResult) => {
-    setResult(levelResult)
-    if (day) saveBestStars(day, exercise.id, levelResult.stars)
-  }
+  const finish = useCallback(
+    (levelResult: LevelResult) => {
+      setResult(levelResult)
+      if (day) saveBestStars(day, exercise.id, levelResult.stars)
+    },
+    [day, exercise.id],
+  )
+
+  const checkWords = useCallback(
+    (guesses: Guess[], giveUp: boolean) =>
+      guessWord(exercise.id, guesses, giveUp).then((response) => ({ ...response, done: Boolean(response.result) })),
+    [exercise.id],
+  )
 
   const praise = PRAISE[result?.stars ?? 0]
 
@@ -49,13 +59,20 @@ export function LevelShell({ exercise, day }: { exercise: Playable; day: string 
       </header>
       <p className="mb-5">{howToPlay(exercise)}</p>
 
-      {exercise.format === 'spot-text' && <SpotText exercise={exercise} onFinish={finish} />}
-      {exercise.format === 'spot-image' && <SpotImage exercise={exercise} onFinish={finish} />}
+      {exercise.format === 'spot-text' && (
+        <SpotText flagCount={exercise.flagCount} maxWrong={exercise.maxWrong} check={checkWords} onDone={(response) => finish(response.result!)}>
+          {(text) => {
+            const { content } = exercise
+            if (content.kind === 'email') return <EmailView email={content} text={text} />
+            if (content.kind === 'message') return <ChatView message={content} text={text} />
+            return <LinkView link={content} text={text} />
+          }}
+        </SpotText>
+      )}
       {exercise.format === 'real-or-fake' && <RealOrFake exercise={exercise} onFinish={finish} />}
-      {exercise.format === 'side-by-side' && <SideBySide exercise={exercise} onFinish={finish} />}
       {exercise.format === 'what-next' && <WhatNext exercise={exercise} onFinish={finish} />}
 
-      {result && <Results result={result} onContinue={() => setPhase('stars')} />}
+      {result && <Results items={result.items} explanation={result.explanation} onContinue={() => setPhase('stars')} />}
 
       <Modal open={phase === 'intro'} labelledBy={introId} onClose={() => setPhase('play')}>
         <h2 id={introId} className="font-display text-3xl font-extrabold">
