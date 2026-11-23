@@ -16,6 +16,31 @@ const WORD_STYLES: Record<TokenMark['state'] | 'idle' | 'checking', string> = {
   missed: 'bg-miss-soft font-bold text-miss outline-2 outline-dashed outline-miss',
 }
 
+const ICON = 'size-9 shrink-0'
+
+// Drawn rather than emoji, so they look the same on every phone.
+function FlagIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg className={ICON} viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round">
+      <path d="M7 29V4" />
+      <path d="M7 5h18l-5 6 5 6H7z" fill={filled ? '#ff5a5f' : 'none'} stroke={filled ? '#ff5a5f' : 'currentColor'} opacity={filled ? 1 : 0.55} />
+    </svg>
+  )
+}
+
+function MistakeIcon({ used }: { used: boolean }) {
+  return used ? (
+    <svg className={ICON} viewBox="0 0 32 32">
+      <circle cx="16" cy="16" r="14" fill="#ff5a5f" />
+      <path d="M10.5 10.5l11 11m0-11l-11 11" stroke="white" strokeWidth="3.5" strokeLinecap="round" />
+    </svg>
+  ) : (
+    <svg className={ICON} viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.5" opacity="0.55">
+      <circle cx="16" cy="16" r="13.5" />
+    </svg>
+  )
+}
+
 const keyOf = (segment: string, token: number) => `${segment}:${token}`
 
 // What the server says after each tap. `done` is true once the level is over.
@@ -95,15 +120,26 @@ export function SpotText<R extends SpotResponse>({ flagCount, maxWrong, check, o
     })
 
   const found = latest?.found ?? 0
-  const wrongLeft = maxWrong - (latest?.wrong ?? 0)
+  const wrong = latest?.wrong ?? 0
 
   return (
     <>
-      <div aria-live="polite" className="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 text-xl font-bold">
-        <span>
-          Red flags found: <span className="text-sun">{found}/{flagCount}</span>
+      {/* Pictures instead of sentences: a flag fills in red for each one found, and a
+          circle turns into a cross for each wrong tap. The hidden line says it in words. */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+        <p aria-live="polite" className="sr-only">
+          {found} of {flagCount} red flags found. {wrong} of {maxWrong} wrong guesses used.
+        </p>
+        <span aria-hidden="true" className="flex flex-wrap gap-2">
+          {Array.from({ length: flagCount }, (_, i) => (
+            <FlagIcon key={i} filled={i < found} />
+          ))}
         </span>
-        <span>Wrong guesses left: <span className="text-sun">{wrongLeft}</span></span>
+        <span aria-hidden="true" className="flex flex-wrap gap-2">
+          {Array.from({ length: maxWrong }, (_, i) => (
+            <MistakeIcon key={i} used={i < wrong} />
+          ))}
+        </span>
       </div>
 
       {children(render)}
@@ -112,7 +148,7 @@ export function SpotText<R extends SpotResponse>({ flagCount, maxWrong, check, o
 
       {!finished && (
         <Button look="plain" className="mt-5" onClick={() => void send(true)}>
-          I’m done
+          I can’t find more
         </Button>
       )}
     </>

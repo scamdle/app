@@ -143,7 +143,7 @@ export function ScenarioShell({ scenario, day, feedback }: {
       : step.kind === 'next'
         ? scenario.nextPrompt
         : backup?.kind === 'flags'
-          ? `Find ${plural(backup.flagCount, 'red flag', 'red flags')}${backup.part === 'landing' ? ' on the page' : hasPage ? ` in the ${thing}` : ''}.`
+          ? `Find ${plural(backup.flagCount, 'red flag', 'red flags')}.`
           : part === 'landing'
             ? 'Why is this page real?'
             : hasPage
@@ -151,7 +151,7 @@ export function ScenarioShell({ scenario, day, feedback }: {
               : 'Why is this real?'
   const detail =
     backup?.kind === 'flags'
-      ? `Tap each sentence or web address that looks suspicious. You can make ${plural(backup.maxWrong, 'wrong guess', 'wrong guesses')}.`
+      ? 'Tap anything that looks suspicious.'
       : null
 
   const continueButton = (
