@@ -124,21 +124,28 @@ export function SpotText<R extends SpotResponse>({ flagCount, maxWrong, check, o
 
   return (
     <>
-      {/* Pictures instead of sentences: a flag fills in red for each one found, and a
-          circle turns into a cross for each wrong tap. The hidden line says it in words. */}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-        <p aria-live="polite" className="sr-only">
-          {found} of {flagCount} red flags found. {wrong} of {maxWrong} wrong guesses used.
-        </p>
-        <span aria-hidden="true" className="flex flex-wrap gap-2">
-          {Array.from({ length: flagCount }, (_, i) => (
-            <FlagIcon key={i} filled={i < found} />
-          ))}
+      {/* Words plus pictures: a flag fills in for each one found, and a circle turns into a
+          cross for each wrong tap. */}
+      <div aria-live="polite" className="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-xl font-bold">
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span>
+            Red flags found: <span className="text-sun">{found}/{flagCount}</span>
+          </span>
+          <span aria-hidden="true" className="flex gap-1">
+            {Array.from({ length: flagCount }, (_, i) => (
+              <FlagIcon key={i} filled={i < found} />
+            ))}
+          </span>
         </span>
-        <span aria-hidden="true" className="flex flex-wrap gap-2">
-          {Array.from({ length: maxWrong }, (_, i) => (
-            <MistakeIcon key={i} used={i < wrong} />
-          ))}
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span>
+            Wrong guesses<span className="sr-only">: {wrong} of {maxWrong}</span>
+          </span>
+          <span aria-hidden="true" className="flex gap-1">
+            {Array.from({ length: maxWrong }, (_, i) => (
+              <MistakeIcon key={i} used={i < wrong} />
+            ))}
+          </span>
         </span>
       </div>
 
