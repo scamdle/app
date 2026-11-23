@@ -49,7 +49,7 @@ export function ChoiceList({ heading, options, submit }: {
     <section>
       {heading && <h2 className="mb-4 font-display text-2xl leading-snug font-extrabold">{heading}</h2>}
       <fieldset>
-        <legend className={checked ? 'sr-only' : 'mb-2 font-bold'}>Tick every right answer:</legend>
+        <legend className="mb-4 font-bold">Tick every right answer:</legend>
         <div className="flex flex-col gap-3">
           {options.map((option, i) => {
             const isTicked = ticked.includes(i)
