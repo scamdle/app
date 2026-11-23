@@ -4,6 +4,7 @@ import * as migration_20261105_195112_game_flow from './20261105_195112_game_flo
 import * as migration_20261105_205147_media_object_key from './20261105_205147_media_object_key';
 import * as migration_20261121_181155_scenario_mode from './20261121_181155_scenario_mode';
 import * as migration_20261123_144458_show_all_scenarios from './20261123_144458_show_all_scenarios';
+import * as migration_20261123_150103_page_why_real from './20261123_150103_page_why_real';
 
 export const migrations = [
   {
@@ -34,6 +35,11 @@ export const migrations = [
   {
     up: migration_20261123_144458_show_all_scenarios.up,
     down: migration_20261123_144458_show_all_scenarios.down,
-    name: '20261123_144458_show_all_scenarios'
+    name: '20261123_144458_show_all_scenarios',
+  },
+  {
+    up: migration_20261123_150103_page_why_real.up,
+    down: migration_20261123_150103_page_why_real.down,
+    name: '20261123_150103_page_why_real'
   },
 ];

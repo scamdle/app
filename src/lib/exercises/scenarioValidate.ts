@@ -5,6 +5,7 @@ import {
   flagProblems,
   messageProblems,
   problemList,
+  rows,
   type ExerciseProblem,
   type Row,
 } from './validate'
@@ -49,8 +50,12 @@ export function scenarioProblems(data: Row): ExerciseProblem[] {
   need('verdictReason', data.verdictReason, 'Explain why it is real or fake.')
   if (data.verdict === 'fake') flagProblems(data, list)
   if (data.verdict === 'real') choiceProblems('whyReal', data.whyReal, list)
+  // Optional: without it, real ads and search results skip the page step.
+  if (data.verdict === 'real' && (medium === 'ad' || medium === 'search') && rows(data.pageWhyReal).length > 0) {
+    choiceProblems('pageWhyReal', data.pageWhyReal, list)
+  }
 
-  need('nextPrompt', data.nextPrompt, 'Add the step 3 question.')
+  need('nextPrompt', data.nextPrompt, 'Add the "what next" question.')
   choiceProblems('nextOptions', data.nextOptions, list)
 
   return problems

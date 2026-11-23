@@ -84,25 +84,29 @@ export function LandingView({ landing, text = plainText }: { landing: PlayableLa
   )
 }
 
-// The message itself and, once Anna has clicked, the page she landed on.
-export function ScenarioContentView({ scenario, text = plainText, showLanding }: {
+// One part of the scenario: the message, ad or result itself, or the page Anna landed on.
+// Ads and search results show them on separate steps, so no screen gets too long.
+export function ScenarioContentView({ scenario, text = plainText, part = 'content', intro }: {
   scenario: PlayableScenario
   text?: RenderText
-  showLanding: boolean
+  part?: 'content' | 'landing'
+  intro?: string
 }) {
   const { content, landing } = scenario
+  if (part === 'landing') {
+    return landing ? (
+      <div className="flex flex-col gap-4">
+        {intro && <p className="font-bold">{intro}</p>}
+        <LandingView landing={landing} text={text} />
+      </div>
+    ) : null
+  }
   return (
     <div className="flex flex-col gap-4">
       {content.kind === 'email' && <EmailView email={content} text={text} />}
       {content.kind === 'message' && <ChatView message={content} text={text} />}
       {content.kind === 'ad' && <AdView ad={content} text={text} />}
       {content.kind === 'search' && <SearchView search={content} text={text} />}
-      {showLanding && landing && (
-        <>
-          <p className="font-bold">Anna clicked it and landed on this page:</p>
-          <LandingView landing={landing} text={text} />
-        </>
-      )}
     </div>
   )
 }

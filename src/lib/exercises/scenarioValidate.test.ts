@@ -49,4 +49,21 @@ describe('scenarioProblems', () => {
     expect(paths(ad)).toEqual([])
     expect(paths({ ...ad, landing: {} })).toEqual(['landing.url', 'landing.headline', 'flags.0.text'])
   })
+
+  it('checks the page reasons of a real ad only when there are any', () => {
+    const ad = {
+      ...base,
+      medium: 'ad',
+      email: undefined,
+      ad: { pageName: 'Shoe Shop', text: 'Sale', displayUrl: 'shoeshop.ee', buttonText: 'Shop now' },
+      landing: { url: 'shoeshop.ee', headline: 'Spring sale' },
+      verdict: 'real',
+      whyReal: [
+        { text: 'Known shop', isCorrect: true, explanation: 'x' },
+        { text: 'Big discount', isCorrect: false, explanation: 'y' },
+      ],
+    }
+    expect(paths(ad)).toEqual([])
+    expect(paths({ ...ad, pageWhyReal: [{ text: 'Has an address', isCorrect: false, explanation: 'x' }] })).toEqual(['pageWhyReal', 'pageWhyReal'])
+  })
 })

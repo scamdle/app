@@ -31,4 +31,10 @@ describe('scenario scoring', () => {
     expect(scenarioPercent([1, 0.5, 0])).toBe(50)
     expect(scenarioPercent([1, 1, 0])).toBe(67)
   })
+
+  it('weighs four steps a quarter each', () => {
+    expect(scenarioPercent([1, 1, 1, 1])).toBe(100)
+    expect(scenarioPercent([1, 0.5, 0, 1])).toBe(63)
+    expect(scenarioPercent([])).toBe(0)
+  })
 })

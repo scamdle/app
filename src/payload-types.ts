@@ -395,7 +395,7 @@ export interface Scenario {
    */
   verdictReason?: string | null;
   /**
-   * Step 2 for fakes: copy the exact text from the message (or landing page), then explain why it is suspicious.
+   * For fakes: copy the exact text, then explain why it is suspicious. Ads and search results: flags in the ad or result are asked in step 2, flags on the landing page in step 3.
    */
   flags?:
     | {
@@ -405,7 +405,7 @@ export interface Scenario {
       }[]
     | null;
   /**
-   * How many wrong taps end step 2. Correct taps are free.
+   * How many wrong taps end a red-flag step. Correct taps are free.
    */
   maxWrongGuesses?: number | null;
   /**
@@ -423,11 +423,25 @@ export interface Scenario {
       }[]
     | null;
   /**
-   * Step 3 question, e.g. "How can Anna check this shop is real before paying?"
+   * Step 3 for real ads and search results: "Why is this page real?" about the landing page. Leave empty to skip the page step.
+   */
+  pageWhyReal?:
+    | {
+        text: string;
+        isCorrect?: boolean | null;
+        /**
+         * Shown after the player checks.
+         */
+        explanation?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * The last step's question, e.g. "How can Anna check this shop is real before paying?"
    */
   nextPrompt?: string | null;
   /**
-   * Step 3 options. Tick every option that is correct.
+   * Last step options. Tick every option that is correct.
    */
   nextOptions?:
     | {
@@ -782,6 +796,14 @@ export interface ScenariosSelect<T extends boolean = true> {
       };
   maxWrongGuesses?: T;
   whyReal?:
+    | T
+    | {
+        text?: T;
+        isCorrect?: T;
+        explanation?: T;
+        id?: T;
+      };
+  pageWhyReal?:
     | T
     | {
         text?: T;

@@ -24,7 +24,8 @@ const choices = (name: string, condition: (data: Data) => boolean, description: 
   ],
 })
 
-// One message played in three steps: real or fake? → back it up → what next?
+// One message played in steps: real or fake? → back it up (ads and search results:
+// the ad or result, then the page) → what next?
 export const Scenarios: CollectionConfig = {
   slug: 'scenarios',
   admin: {
@@ -148,7 +149,8 @@ export const Scenarios: CollectionConfig = {
       labels: { singular: 'Red flag', plural: 'Red flags' },
       admin: {
         condition: isVerdict('fake'),
-        description: 'Step 2 for fakes: copy the exact text from the message (or landing page), then explain why it is suspicious.',
+        description:
+          'For fakes: copy the exact text, then explain why it is suspicious. Ads and search results: flags in the ad or result are asked in step 2, flags on the landing page in step 3.',
       },
       fields: [
         { name: 'text', type: 'text', required: true },
@@ -160,18 +162,24 @@ export const Scenarios: CollectionConfig = {
       type: 'number',
       min: 1,
       defaultValue: 3,
-      admin: { condition: isVerdict('fake'), description: 'How many wrong taps end step 2. Correct taps are free.' },
+      admin: { condition: isVerdict('fake'), description: 'How many wrong taps end a red-flag step. Correct taps are free.' },
     },
     choices('whyReal', isVerdict('real'), 'Step 2 for real ones: "Why is this real?" Tick every option that is a good reason.', true),
+    choices(
+      'pageWhyReal',
+      (data) => isVerdict('real')(data) && usesMedium('ad', 'search')(data),
+      'Step 3 for real ads and search results: "Why is this page real?" about the landing page. Leave empty to skip the page step.',
+      true,
+    ),
 
     // Step 3
     {
       name: 'nextPrompt',
       type: 'text',
       defaultValue: 'What should Anna do next?',
-      admin: { description: 'Step 3 question, e.g. "How can Anna check this shop is real before paying?"' },
+      admin: { description: 'The last step\'s question, e.g. "How can Anna check this shop is real before paying?"' },
     },
-    choices('nextOptions', () => true, 'Step 3 options. Tick every option that is correct.'),
+    choices('nextOptions', () => true, 'Last step options. Tick every option that is correct.'),
 
     explanationField('Optional lesson shown on the summary at the end.'),
     statusField,

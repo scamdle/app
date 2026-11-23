@@ -95,7 +95,7 @@ To cut authoring work by about a third, a day can be **one scenario played in th
 
 Feedback with reasons comes after steps 2 and 3, and a summary at the end shows the score, why it was real or fake, and the lesson.
 
-Scenario media: email, SMS, WhatsApp, Messenger, **social media ads** (Facebook, Instagram) and **search results** (with a "Sponsored" label). All are drawn in HTML from fields, with no images. Ads and search results include the **landing page** Anna reaches after clicking. Its words can be red flags too, and so can the "Sponsored" label.
+Scenario media: email, SMS, WhatsApp, Messenger, **social media ads** (Facebook, Instagram) and **search results** (with a "Sponsored" label). All are drawn in HTML from fields, with no images. Ads and search results include the **landing page** Anna reaches after clicking. Its words can be red flags too, and so can the "Sponsored" label. To keep each screen short, ads and search results are played in **four steps**: real or fake (the ad or result alone), back it up on the ad or result, then the landing page on its own ("Anna clicked it anyway…": red flags there, or "Why is this page real?" for real ones), then what next. A red flag belongs to the step whose text contains it. A page step with nothing in it is skipped.
 
 **Not everything is a scam.** Real items appear in real or fake and as real scenarios, for example a genuine login code from Anna's bank. Users should learn to *check*, not to distrust everything.
 
@@ -223,7 +223,7 @@ A mistake in *what would you do next?* is a right action left unticked or a wron
 
 The scoring rules live in one shared server module with a unit test for every row of the tables above.
 
-**Scenario mode scores 0–100%.** Each step is worth a third. Step 1 is all or nothing. Red flags score found ÷ total, minus 0.1 per wrong tap. Tick-the-right-answers steps score (right ticks − wrong ticks) ÷ right answers. Nothing goes below 0. The server replays every answer to work out the score, so a later "you did better than X% of players today" feature can trust it (that would change the "no leaderboards" line above, so it's for the team to decide).
+**Scenario mode scores 0–100%.** Every step is worth the same: a third, or a quarter for four-step ads and search results. Step 1 is all or nothing. Red flags score found ÷ total, minus 0.1 per wrong tap. Tick-the-right-answers steps score (right ticks − wrong ticks) ÷ right answers. Nothing goes below 0. The server replays every answer to work out the score, so a later "you did better than X% of players today" feature can trust it (that would change the "no leaderboards" line above, so it's for the team to decide).
 
 **Feedback form (user testing).** After the scenario summary, players answer a short anonymous form: age group, then 1–5 scales on confidence spotting scams, knowing what to do, difficulty, clear instructions, readability and ease of use, plus an optional comment. The team edits the questions in Game settings → Feedback form, and a switch makes the form required (on for testing) or skippable. Answers go to the Feedback collection with the day, the scenario, the server's score and a random device id: no name, email or IP.
 

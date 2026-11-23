@@ -58,11 +58,16 @@ export type PlayableScenario = Base & {
 
 export type Verdict = 'real' | 'fake'
 
-export type ScenarioStep2 = { kind: 'flags'; flagCount: number; maxWrong: number } | { kind: 'why'; options: string[] }
+// A "back it up" step: tap the red flags (fakes) or tick why it's real (real ones).
+// Ads and search results get one for the ad or result and one for the page Anna lands on.
+export type ScenarioPart = 'content' | 'landing'
+export type ScenarioBackup =
+  | { part: ScenarioPart; kind: 'flags'; flagCount: number; maxWrong: number }
+  | { part: ScenarioPart; kind: 'why'; options: string[] }
 
-export type ScenarioVerdictResponse = { correct: boolean; verdict: Verdict; step2: ScenarioStep2 }
+export type ScenarioVerdictResponse = { correct: boolean; verdict: Verdict; backups: ScenarioBackup[] }
 
-// `points` runs from 0 to 1; each of the three steps is worth a third of the score.
+// `points` runs from 0 to 1; every step is worth the same share of the score.
 export type ScenarioStepResult = { points: number; items: ResultItem[] }
 
 export type ScenarioGuessResponse = {
@@ -76,11 +81,18 @@ export type ScenarioGuessResponse = {
 
 export type ScenarioChoiceResponse = { correct: boolean[]; step: ScenarioStepResult }
 
-export type ScenarioAnswers = { verdict: Verdict; guesses: Guess[]; whyTicked: number[]; nextTicked: number[] }
+export type ScenarioAnswers = {
+  verdict: Verdict
+  guesses: Guess[]
+  pageGuesses: Guess[]
+  whyTicked: number[]
+  pageWhyTicked: number[]
+  nextTicked: number[]
+}
 
 export type ScenarioSummary = {
   percent: number
-  steps: [number, number, number]
+  steps: { name: string; points: number }[]
   verdict: Verdict
   verdictReason: string | null
   explanation: unknown

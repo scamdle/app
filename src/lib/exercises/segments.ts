@@ -56,3 +56,18 @@ export function textSegments(exercise: TextContent): Record<string, string> {
   }
   return Object.fromEntries(Object.entries(segments).filter((e): e is [string, string] => Boolean(e[1])))
 }
+
+// Ad and search scenarios are played in two parts: the ad or result first, then the page
+// Anna lands on. Each part has its own red-flag step.
+export type ScenarioPart = 'content' | 'landing'
+
+const inPart = (id: string, part: ScenarioPart) => id.startsWith('landing.') === (part === 'landing')
+
+export function partSegments(exercise: TextContent, part: ScenarioPart): Record<string, string> {
+  return Object.fromEntries(Object.entries(textSegments(exercise)).filter(([id]) => inPart(id, part)))
+}
+
+// A flag belongs to the ad or result when its text appears there, otherwise to the page.
+export function flagPart(exercise: TextContent, flag: string): ScenarioPart {
+  return Object.values(partSegments(exercise, 'content')).some((text) => text.includes(flag)) ? 'content' : 'landing'
+}
