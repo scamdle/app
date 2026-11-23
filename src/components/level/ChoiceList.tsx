@@ -26,7 +26,8 @@ export function ChoiceList({ heading, options, submit }: {
   const summary = useRef<HTMLParagraphElement>(null)
 
   useEffect(() => {
-    if (checked) summary.current?.focus()
+    // No scroll: the player reads the answers first, the total sits under them.
+    if (checked) summary.current?.focus({ preventScroll: true })
   }, [checked])
 
   const check = async () => {
@@ -46,13 +47,8 @@ export function ChoiceList({ heading, options, submit }: {
   return (
     <section>
       <h2 className="font-display text-2xl leading-snug font-extrabold">{heading}</h2>
-      {checked && (
-        <p ref={summary} tabIndex={-1} className="mt-3 text-xl font-bold">
-          {rightCount} of {options.length} correct
-        </p>
-      )}
       <fieldset className="mt-4">
-        <legend className="mb-2 font-bold">{checked ? 'Each answer explained:' : 'Tick every right answer:'}</legend>
+        <legend className={checked ? 'sr-only' : 'mb-2 font-bold'}>Tick every right answer:</legend>
         <div className="flex flex-col gap-3">
           {options.map((option, i) => {
             const isTicked = ticked.includes(i)
@@ -87,6 +83,11 @@ export function ChoiceList({ heading, options, submit }: {
           })}
         </div>
       </fieldset>
+      {checked && (
+        <p ref={summary} tabIndex={-1} className="mt-4 text-xl font-bold">
+          {rightCount} of {options.length} correct
+        </p>
+      )}
       {checked === null && (
         <>
           <Button className="mt-4 w-full" disabled={ticked.length === 0 || busy} onClick={() => void check()}>
