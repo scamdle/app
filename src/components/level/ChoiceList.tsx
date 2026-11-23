@@ -1,35 +1,39 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { Button } from './Button'
 
-const verdict = (isCorrect: boolean, isTicked: boolean) => {
-  if (isCorrect) return isTicked ? { word: 'Right to tick', tone: 'good' } : { word: 'Should be ticked', tone: 'miss' }
-  return isTicked ? { word: 'Should not be ticked', tone: 'bad' } : { word: 'Right to skip', tone: 'good' }
+export type ChoiceCheck = { correct: boolean[]; reasons: (string | null)[] }
+
+// One word per option: did the player handle it right (ticked a right answer, or left a wrong one empty)?
+const TONES = {
+  good: { word: 'Correct', mark: '✓', border: 'border-good', box: 'bg-good-soft', text: 'text-good' },
+  bad: { word: 'Incorrect', mark: '✗', border: 'border-bad', box: 'bg-bad-soft', text: 'text-bad' },
 }
 
-const TONES: Record<string, { border: string; text: string }> = {
-  good: { border: 'border-good', text: 'text-good' },
-  miss: { border: 'border-miss', text: 'text-miss' },
-  bad: { border: 'border-bad', text: 'text-bad' },
-}
-
-// Tick every right answer, then one Check. `submit` asks the server and returns which options were correct.
+// Tick every right answer, then one Check. `submit` asks the server which options were
+// correct and why; the answers then open up inside each option.
 export function ChoiceList({ heading, options, submit }: {
   heading: string
   options: string[]
-  submit: (ticked: number[]) => Promise<boolean[]>
+  submit: (ticked: number[]) => Promise<ChoiceCheck>
 }) {
   const [ticked, setTicked] = useState<number[]>([])
-  const [correct, setCorrect] = useState<boolean[] | null>(null)
+  const [checked, setChecked] = useState<ChoiceCheck | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(false)
+  const summary = useRef<HTMLParagraphElement>(null)
+
+  useEffect(() => {
+    // No scroll: the player reads the answers first, the total sits under them.
+    if (checked) summary.current?.focus({ preventScroll: true })
+  }, [checked])
 
   const check = async () => {
     setBusy(true)
     try {
-      setCorrect(await submit(ticked))
+      setChecked(await submit(ticked))
       setError(false)
     } catch {
       setError(true)
@@ -38,37 +42,53 @@ export function ChoiceList({ heading, options, submit }: {
     }
   }
 
+  const rightCount = checked ? options.filter((_, i) => checked.correct[i] === ticked.includes(i)).length : 0
+
   return (
     <section>
       <h2 className="font-display text-2xl leading-snug font-extrabold">{heading}</h2>
       <fieldset className="mt-4">
-        <legend className="mb-2 font-bold">Tick every right answer:</legend>
+        <legend className={checked ? 'sr-only' : 'mb-2 font-bold'}>Tick every right answer:</legend>
         <div className="flex flex-col gap-3">
           {options.map((option, i) => {
             const isTicked = ticked.includes(i)
-            const after = correct && verdict(correct[i], isTicked)
+            const after = checked && TONES[checked.correct[i] === isTicked ? 'good' : 'bad']
+            const reason = checked?.reasons[i]
             return (
-              <label key={i} className={`on-paper flex min-h-14 items-start gap-3 rounded-xl border-4 bg-paper p-3 text-ink ${after ? TONES[after.tone].border : 'cursor-pointer border-transparent'}`}>
-                <input
-                  type="checkbox"
-                  checked={isTicked}
-                  // Not `disabled`: browsers fade those until players can't see what they chose.
-                  aria-disabled={correct !== null}
-                  onChange={() => {
-                    if (correct === null) setTicked((list) => (isTicked ? list.filter((n) => n !== i) : [...list, i]))
-                  }}
-                  className="mt-1 size-7 shrink-0 accent-navy"
-                />
-                <span>
-                  {option}
-                  {after && <strong className={`block ${TONES[after.tone].text}`}>{after.word}</strong>}
+              <label key={i} className={`on-paper flex flex-col overflow-hidden rounded-xl border-4 bg-paper text-ink ${after ? after.border : 'cursor-pointer border-transparent'}`}>
+                <span className="flex min-h-14 items-start gap-3 p-3">
+                  <input
+                    type="checkbox"
+                    checked={isTicked}
+                    // Not `disabled`: browsers fade those until players can't see what they chose.
+                    aria-disabled={checked !== null}
+                    onChange={() => {
+                      if (checked === null) setTicked((list) => (isTicked ? list.filter((n) => n !== i) : [...list, i]))
+                    }}
+                    className="mt-1 size-7 shrink-0 accent-navy"
+                  />
+                  <span>{option}</span>
                 </span>
+                {after && (
+                  <span className={`block border-t-2 border-mist p-3 ${after.box}`}>
+                    <strong className={`block text-lg ${after.text}`}>
+                      <span aria-hidden="true">{after.mark} </span>
+                      {after.word}
+                    </strong>
+                    {reason && <span className="mt-1 block">{reason}</span>}
+                  </span>
+                )}
               </label>
             )
           })}
         </div>
       </fieldset>
-      {correct === null && (
+      {checked && (
+        <p ref={summary} tabIndex={-1} className="mt-4 text-xl font-bold">
+          {rightCount} of {options.length} correct
+        </p>
+      )}
+      {checked === null && (
         <>
           <Button className="mt-4 w-full" disabled={ticked.length === 0 || busy} onClick={() => void check()}>
             Check

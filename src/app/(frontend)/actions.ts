@@ -17,7 +17,7 @@ export async function getDailySet(day: string): Promise<DailySetView | null> {
   const date = day > latest ? latest : day
 
   const payload = await getPayload({ config })
-  const { mode } = await getGameSettings()
+  const { mode, showAllScenarios } = await getGameSettings()
   // In scenario mode only sets with a scenario count, so an older 3-task-only set isn't picked.
   const where = {
     region: { equals: DEFAULT_REGION },
@@ -26,12 +26,27 @@ export async function getDailySet(day: string): Promise<DailySetView | null> {
   }
   const { docs, totalDocs } = await payload.find({ collection: 'daily-sets', where, sort: '-date', limit: 1, depth: 1 })
   const set = docs[0]
-  if (!set) return null
 
   if (mode === 'scenario') {
+    // Testing switch: every published scenario, so testers don't have to edit the daily set.
+    const all = showAllScenarios
+      ? (
+          await payload.find({
+            collection: 'scenarios',
+            where: { status: { equals: 'published' } },
+            sort: '-updatedAt',
+            limit: 100,
+            depth: 0,
+            select: { title: true },
+          })
+        ).docs.map(({ id, title }) => ({ id, title }))
+      : null
+    if (!set) return all ? { mode, date, number: 0, scenario: null, all } : null
     const scenario = typeof set.scenario === 'object' && set.scenario?.status === 'published' ? set.scenario : null
-    return { mode, date: set.date, number: totalDocs, scenario: scenario && { id: scenario.id, title: scenario.title } }
+    return { mode, date: set.date, number: totalDocs, scenario: scenario && { id: scenario.id, title: scenario.title }, all }
   }
+
+  if (!set) return null
 
   return {
     mode,

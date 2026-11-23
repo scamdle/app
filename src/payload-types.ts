@@ -883,6 +883,10 @@ export interface GameSetting {
    * 3 separate tasks: each daily set uses its 3 Exercises. 1 scenario in 3 steps: each daily set uses its Scenario (real or fake, back it up, what next).
    */
   mode: 'three-tasks' | 'scenario';
+  /**
+   * So testers can play any scenario without changing the daily set. Turn it off before real players arrive.
+   */
+  showAllScenarios?: boolean | null;
   feedbackEnabled?: boolean | null;
   /**
    * On for user testing. Turn it off later and players get a Skip button.
@@ -932,6 +936,7 @@ export interface GameSetting {
  */
 export interface GameSettingsSelect<T extends boolean = true> {
   mode?: T;
+  showAllScenarios?: T;
   feedbackEnabled?: T;
   feedbackRequired?: T;
   ageGroups?:

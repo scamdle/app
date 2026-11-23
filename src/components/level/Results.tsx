@@ -35,7 +35,7 @@ export function Results({ items, explanation: lesson = null, heading: title = 'H
       <h2 ref={heading} tabIndex={-1} className="font-display text-3xl font-extrabold">
         {title}
       </h2>
-      <ul className="mt-4 divide-y divide-mist">
+      {items.length > 0 && <ul className="mt-4 divide-y divide-mist">
         {items.map((item, i) => (
           <li key={i} className="py-3">
             <strong className={`block ${KINDS[item.kind].style}`}>{item.word ?? KINDS[item.kind].word}</strong>
@@ -43,7 +43,7 @@ export function Results({ items, explanation: lesson = null, heading: title = 'H
             {item.reason ? <p className="mt-1">{item.reason}</p> : item.kind === 'bad' ? <p className="mt-1">This part wasn’t a red flag.</p> : null}
           </li>
         ))}
-      </ul>
+      </ul>}
       {explanation?.root && <RichText data={explanation} className="mt-4 border-t-2 border-mist pt-4" />}
       <Button className="mt-5 w-full sm:w-auto" onClick={onContinue}>
         {continueLabel}

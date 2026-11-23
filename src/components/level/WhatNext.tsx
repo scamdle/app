@@ -14,8 +14,9 @@ export function WhatNext({ exercise, onFinish }: {
 
   const submit = async (ticked: number[]) => {
     const response = await answerOptions(exercise.id, ticked)
-    onFinish(response.result)
-    return response.correct
+    // The explanations now open up inside each option, so the results card skips the list.
+    onFinish({ ...response.result, items: [] })
+    return { correct: response.correct, reasons: response.result.items.map((item) => item.reason) }
   }
 
   return (

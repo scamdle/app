@@ -40,6 +40,7 @@ export function HomeScreen() {
   const [scores, setScores] = useState<Record<string, number>>({})
   const [later, setLater] = useState<string | null>(null)
   const laterId = useId()
+  const allId = useId()
 
   useEffect(() => {
     let active = true
@@ -92,7 +93,7 @@ export function HomeScreen() {
 
       <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center py-8 text-center">
         <h1 className="font-display text-[clamp(3.5rem,18vw,4.5rem)] leading-none font-extrabold text-sun sm:text-8xl">Scamdle</h1>
-        <p className="mt-3 min-h-9 text-2xl sm:text-4xl">{set && `Daily #${set.number} · ${formatDate(set.date)}`}</p>
+        <p className="mt-3 min-h-9 text-2xl sm:text-4xl">{set && set.number > 0 && `Daily #${set.number} · ${formatDate(set.date)}`}</p>
 
         {loaded && set?.mode === 'scenario' && set.scenario && (
           <div className="mt-10 flex w-full max-w-md flex-col items-center gap-3 sm:mt-14 lg:max-w-xl">
@@ -106,6 +107,27 @@ export function HomeScreen() {
               {scores[set.scenario.id] !== undefined ? 'Play again' : 'Today’s scenario'}
             </Link>
           </div>
+        )}
+        {loaded && set?.mode === 'scenario' && set.all && (
+          <section aria-labelledby={allId} className="mt-12 w-full max-w-md text-left lg:max-w-xl">
+            <h2 id={allId} className="font-display text-2xl font-extrabold">
+              All published scenarios <span className="font-normal">(testing)</span>
+            </h2>
+            {set.all.length === 0 && <p className="mt-3">None published yet.</p>}
+            <ul className="mt-3 flex flex-col gap-3">
+              {set.all.map((scenario) => (
+                <li key={scenario.id}>
+                  <Link
+                    href={`/scenario/${scenario.id}?day=${set.date}`}
+                    className="flex min-h-14 items-center justify-between gap-4 rounded-xl bg-paper px-4 py-3 text-lg font-bold text-navy hover:bg-[#fff6d4]"
+                  >
+                    <span>{scenario.title}</span>
+                    {scores[scenario.id] !== undefined && <span className="shrink-0">{scores[scenario.id]}%</span>}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
         {loaded && set?.mode === 'three-tasks' && set.tasks.length > 0 && (
           <ol className="mt-10 grid w-full max-w-sm grid-cols-1 gap-7 sm:mt-14 sm:max-w-none sm:grid-cols-3 sm:gap-8">
@@ -122,7 +144,7 @@ export function HomeScreen() {
             ))}
           </ol>
         )}
-        {loaded && !failed && (!set || (set.mode === 'three-tasks' ? set.tasks.length === 0 : !set.scenario)) && <p className="mt-10 text-2xl">No tasks yet. Please come back soon.</p>}
+        {loaded && !failed && (!set || (set.mode === 'three-tasks' ? set.tasks.length === 0 : !set.scenario && !set.all)) && <p className="mt-10 text-2xl">No tasks yet. Please come back soon.</p>}
         {failed && <p role="alert" className="mt-10 text-2xl">We couldn’t load today’s tasks. Please try again in a moment.</p>}
       </div>
 
