@@ -198,14 +198,20 @@ export function ScenarioShell({ scenario, day, feedback }: {
               const response = await answerScenarioChoices(scenario.id, 'why', ticked)
               answers.current.whyTicked = ticked
               setStep2(response.step)
-              return response.correct
+              return { correct: response.correct, reasons: response.step.items.map((item) => item.reason) }
             }}
           />
         </div>
       )}
 
-      {phase === 'step2' && step2 && (
+      {phase === 'step2' && step2 && verdict?.step2.kind === 'flags' && (
         <Results items={step2.items} heading="How you did on step 2" onContinue={() => setPhase('step3')} />
+      )}
+
+      {phase === 'step2' && step2 && verdict?.step2.kind === 'why' && (
+        <Button className="mt-6 w-full sm:w-auto" onClick={() => setPhase('step3')}>
+          Continue to step 3
+        </Button>
       )}
 
       {phase === 'step3' && (
@@ -219,17 +225,14 @@ export function ScenarioShell({ scenario, day, feedback }: {
                 const response = await answerScenarioChoices(scenario.id, 'next', ticked)
                 answers.current.nextTicked = ticked
                 setStep3(response.step)
-                return response.correct
+                return { correct: response.correct, reasons: response.step.items.map((item) => item.reason) }
               }}
             />
           </div>
           {step3 && (
-            <Results
-              items={step3.items}
-              heading="How you did on step 3"
-              continueLabel={busy ? 'One moment…' : 'See your score'}
-              onContinue={() => void (busy || finish())}
-            />
+            <Button className="mt-6 w-full sm:w-auto" onClick={() => void (busy || finish())}>
+              {busy ? 'One moment…' : 'See your score'}
+            </Button>
           )}
         </>
       )}
