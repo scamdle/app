@@ -3,6 +3,7 @@ import * as migration_20261104_122510_red_flags_email from './20261104_122510_re
 import * as migration_20261105_195112_game_flow from './20261105_195112_game_flow';
 import * as migration_20261105_205147_media_object_key from './20261105_205147_media_object_key';
 import * as migration_20261121_181155_scenario_mode from './20261121_181155_scenario_mode';
+import * as migration_20261123_144458_show_all_scenarios from './20261123_144458_show_all_scenarios';
 
 export const migrations = [
   {
@@ -28,6 +29,11 @@ export const migrations = [
   {
     up: migration_20261121_181155_scenario_mode.up,
     down: migration_20261121_181155_scenario_mode.down,
-    name: '20261121_181155_scenario_mode'
+    name: '20261121_181155_scenario_mode',
+  },
+  {
+    up: migration_20261123_144458_show_all_scenarios.up,
+    down: migration_20261123_144458_show_all_scenarios.down,
+    name: '20261123_144458_show_all_scenarios'
   },
 ];

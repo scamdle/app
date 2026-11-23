@@ -89,4 +89,5 @@ export type ScenarioSummary = {
 export type DailyTask = { id: number; title: string }
 export type DailySetView =
   | { mode: 'three-tasks'; date: string; number: number; tasks: DailyTask[] }
-  | { mode: 'scenario'; date: string; number: number; scenario: DailyTask | null }
+  // `all` lists every published scenario while the testing switch is on, otherwise null.
+  | { mode: 'scenario'; date: string; number: number; scenario: DailyTask | null; all: DailyTask[] | null }

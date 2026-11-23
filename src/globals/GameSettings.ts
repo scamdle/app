@@ -29,6 +29,16 @@ export const GameSettings: GlobalConfig = {
                   '3 separate tasks: each daily set uses its 3 Exercises. 1 scenario in 3 steps: each daily set uses its Scenario (real or fake, back it up, what next).',
               },
             },
+            {
+              name: 'showAllScenarios',
+              type: 'checkbox',
+              defaultValue: false,
+              label: 'Testing: list every published scenario on the home screen',
+              admin: {
+                condition: (data) => data?.mode === 'scenario',
+                description: 'So testers can play any scenario without changing the daily set. Turn it off before real players arrive.',
+              },
+            },
           ],
         },
         {
