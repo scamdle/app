@@ -18,16 +18,7 @@ const WORD_STYLES: Record<TokenMark['state'] | 'idle' | 'checking', string> = {
 
 const ICON = 'size-9 shrink-0'
 
-// Drawn rather than emoji, so they look the same on every phone.
-function FlagIcon({ filled }: { filled: boolean }) {
-  return (
-    <svg className={ICON} viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round">
-      <path d="M7 29V4" />
-      <path d="M7 5h18l-5 6 5 6H7z" fill={filled ? '#ff5a5f' : 'none'} stroke={filled ? '#ff5a5f' : 'currentColor'} opacity={filled ? 1 : 0.55} />
-    </svg>
-  )
-}
-
+// Drawn rather than emoji, so it looks the same on every phone.
 function MistakeIcon({ used }: { used: boolean }) {
   return used ? (
     <svg className={ICON} viewBox="0 0 32 32">
@@ -124,18 +115,10 @@ export function SpotText<R extends SpotResponse>({ flagCount, maxWrong, check, o
 
   return (
     <>
-      {/* Words plus pictures: a flag fills in for each one found, and a circle turns into a
-          cross for each wrong tap. */}
+      {/* A circle turns into a cross for each wrong tap. */}
       <div aria-live="polite" className="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-xl font-bold">
-        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span>
-            Red flags found: <span className="text-sun">{found}/{flagCount}</span>
-          </span>
-          <span aria-hidden="true" className="flex gap-1">
-            {Array.from({ length: flagCount }, (_, i) => (
-              <FlagIcon key={i} filled={i < found} />
-            ))}
-          </span>
+        <span>
+          Red flags found: <span className="text-sun">{found}/{flagCount}</span>
         </span>
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span>
