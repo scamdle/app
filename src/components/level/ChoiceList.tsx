@@ -14,8 +14,9 @@ const TONES = {
 
 // Tick every right answer, then one Check. `submit` asks the server which options were
 // correct and why; the answers then open up inside each option.
+// `heading` is optional: scenario steps show the question as the page's main instruction instead.
 export function ChoiceList({ heading, options, submit }: {
-  heading: string
+  heading?: string
   options: string[]
   submit: (ticked: number[]) => Promise<ChoiceCheck>
 }) {
@@ -46,8 +47,8 @@ export function ChoiceList({ heading, options, submit }: {
 
   return (
     <section>
-      <h2 className="font-display text-2xl leading-snug font-extrabold">{heading}</h2>
-      <fieldset className="mt-4">
+      {heading && <h2 className="mb-4 font-display text-2xl leading-snug font-extrabold">{heading}</h2>}
+      <fieldset>
         <legend className={checked ? 'sr-only' : 'mb-2 font-bold'}>Tick every right answer:</legend>
         <div className="flex flex-col gap-3">
           {options.map((option, i) => {

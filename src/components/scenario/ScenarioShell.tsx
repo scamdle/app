@@ -90,13 +90,6 @@ export function ScenarioShell({ scenario, day, feedback }: {
   const step = steps[stepIndex]
   const isLast = step.kind === 'next'
 
-  const stepName = (s: Step) => {
-    if (s.kind === 'verdict') return 'Real or fake'
-    if (s.kind === 'next') return 'What to do next'
-    if (s.backup.part === 'landing') return 'The page'
-    return hasPage ? `The ${thing}` : 'Backing it up'
-  }
-
   const heading = useFocusOnChange(intro ? null : `${phase}-${stepIndex}`)
   const askFeedback = Boolean(feedback && day && !feedbackGiven(day))
   const howTo = hasPage
@@ -142,6 +135,25 @@ export function ScenarioShell({ scenario, day, feedback }: {
     }
   }
 
+  // The one thing to do on this step, shown big. `detail` is the smaller how-to under it.
+  const backup = step.kind === 'backup' ? step.backup : null
+  const instruction =
+    step.kind === 'verdict'
+      ? 'Look closely. Is this real or fake?'
+      : step.kind === 'next'
+        ? scenario.nextPrompt
+        : backup?.kind === 'flags'
+          ? `Find ${plural(backup.flagCount, 'red flag', 'red flags')}${backup.part === 'landing' ? ' on the page' : hasPage ? ` in the ${thing}` : ''}.`
+          : part === 'landing'
+            ? 'Why is this page real?'
+            : hasPage
+              ? `Why is this ${thing} real?`
+              : 'Why is this real?'
+  const detail =
+    backup?.kind === 'flags'
+      ? `Tap each sentence or web address that looks suspicious. You can make ${plural(backup.maxWrong, 'wrong guess', 'wrong guesses')}.`
+      : null
+
   const continueButton = (
     <Button className="mt-6 w-full sm:w-auto" onClick={() => void (isLast ? busy || finish() : goNext())}>
       {isLast ? (busy ? 'One moment…' : 'See your score') : `Continue to step ${stepIndex + 2}`}
@@ -155,25 +167,39 @@ export function ScenarioShell({ scenario, day, feedback }: {
 
   return (
     <main className="mx-auto max-w-5xl px-4 pt-4 pb-10">
-      <header className="mb-2 flex items-center gap-4">
+      {/* The page title only matters in the intro pop-up, so screen readers get it and the
+          screen shows what to do instead: older players need the instruction to stand out. */}
+      <h1 className="sr-only">{scenario.title}</h1>
+      <header className="mb-3 flex min-h-12 items-center justify-between gap-4 text-base">
         {/* While the form is required, the way home is through it. */}
-        {!(feedback?.required && askFeedback && (phase === 'summary' || phase === 'feedback')) && (
-          <Link href="/" className="inline-flex min-h-12 shrink-0 items-center rounded-lg pr-1 font-bold whitespace-nowrap underline underline-offset-4">
+        {!(feedback?.required && askFeedback && (phase === 'summary' || phase === 'feedback')) ? (
+          <Link href="/" className="inline-flex min-h-12 items-center rounded-lg pr-1 font-bold whitespace-nowrap underline underline-offset-4">
             ← Home
           </Link>
+        ) : (
+          <span />
         )}
-        <h1 className="font-display text-2xl font-extrabold text-sun">{scenario.title}</h1>
+        {phase === 'play' && (
+          <span aria-hidden="true" className="font-bold">
+            Step {stepIndex + 1} of {stepCount}
+          </span>
+        )}
       </header>
 
       {phase === 'play' && (
-        <h2 ref={heading} tabIndex={-1} className="mb-4 font-display text-xl font-extrabold">
-          Step {stepIndex + 1} of {stepCount}: {stepName(step)}
-        </h2>
+        <div className="mb-5">
+          <h2 ref={heading} tabIndex={-1} className="font-display text-3xl leading-tight font-extrabold text-sun sm:text-4xl">
+            <span className="sr-only">
+              Step {stepIndex + 1} of {stepCount}:{' '}
+            </span>
+            {instruction}
+          </h2>
+          {detail && <p className="mt-2 text-xl">{detail}</p>}
+        </div>
       )}
 
       {phase === 'play' && step.kind === 'verdict' && (
         <>
-          <p className="mb-5">Look closely. Is this real or fake?</p>
           {view('content')}
           <div className="mt-5 grid grid-cols-2 gap-4">
             {CHOICES.map((choice) => (
@@ -209,11 +235,6 @@ export function ScenarioShell({ scenario, day, feedback }: {
 
       {phase === 'play' && step.kind === 'backup' && step.backup.kind === 'flags' && (
         <div key={stepIndex}>
-          <p className="mb-5">
-            Find {plural(step.backup.flagCount, 'red flag', 'red flags')}
-            {step.backup.part === 'landing' ? ' on the page' : hasPage ? ` in the ${thing}` : ''}. Tap each sentence or web address that looks suspicious. You
-            can make {plural(step.backup.maxWrong, 'wrong guess', 'wrong guesses')}.
-          </p>
           <SpotText
             flagCount={step.backup.flagCount}
             maxWrong={step.backup.maxWrong}
@@ -242,7 +263,6 @@ export function ScenarioShell({ scenario, day, feedback }: {
           <div className="grid items-start gap-5 md:grid-cols-2">
             {view(part, part === 'landing' ? landingIntro : undefined)}
             <ChoiceList
-              heading={part === 'landing' ? 'Why is this page real?' : hasPage ? `Why is this ${thing} real?` : 'Why is this real?'}
               options={step.backup.options}
               submit={async (ticked) => {
                 const response = await answerScenarioChoices(scenario.id, part === 'landing' ? 'pageWhy' : 'why', ticked)
@@ -263,7 +283,6 @@ export function ScenarioShell({ scenario, day, feedback }: {
             {/* Anna is on the page by now, so ads and results show only that. */}
             {view(hasPage ? 'landing' : 'content', hasPage ? 'Anna is on this page:' : undefined)}
             <ChoiceList
-              heading={scenario.nextPrompt}
               options={scenario.nextOptions}
               submit={async (ticked) => {
                 const response = await answerScenarioChoices(scenario.id, 'next', ticked)
