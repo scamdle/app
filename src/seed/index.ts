@@ -209,7 +209,7 @@ const scenarios: ScenarioSample[] = [
   },
   {
     title: 'Hi Grandma, new number',
-    description: 'Anna gets this WhatsApp message on a Sunday evening.',
+    description: 'Anna gets this WhatsApp message on a Sunday afternoon.',
     medium: 'message',
     message: {
       platform: 'whatsapp',
