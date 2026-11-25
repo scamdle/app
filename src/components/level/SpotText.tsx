@@ -9,7 +9,7 @@ import { Button } from './Button'
 import type { RenderText } from './views'
 
 const WORD_STYLES: Record<TokenMark['state'] | 'idle' | 'checking', string> = {
-  idle: 'cursor-pointer underline decoration-mist decoration-dotted decoration-2 underline-offset-4 hover:bg-sun/30 hover:decoration-navy',
+  idle: 'cursor-pointer underline decoration-current/60 decoration-dotted decoration-2 underline-offset-4 hover:bg-sun/30 hover:decoration-current',
   checking: 'bg-mist',
   found: 'bg-good-soft font-bold text-good',
   wrong: 'bg-bad-soft text-bad line-through decoration-2',

@@ -30,7 +30,7 @@ function Phone({ screen, children }: { screen: string; children: ReactNode }) {
   return (
     <article className="on-paper mx-auto w-full max-w-[25rem] rounded-[3.25rem] border-2 border-[#33333a] bg-[#111114] p-2.5 font-[system-ui,sans-serif] text-[#111114] shadow-2xl">
       <div className={`relative flex min-h-[38rem] flex-col overflow-hidden rounded-[2.6rem] ${screen}`}>
-        <span aria-hidden="true" className="absolute top-3 left-1/2 h-7 w-28 -translate-x-1/2 rounded-full bg-[#0b0b0d]" />
+        <span aria-hidden="true" className="absolute top-3 left-1/2 z-10 h-7 w-28 -translate-x-1/2 rounded-full bg-[#0b0b0d]" />
         {children}
       </div>
     </article>
