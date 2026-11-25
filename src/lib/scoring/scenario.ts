@@ -5,10 +5,6 @@ export const WRONG_TAP_COST = 0.1
 
 const clamp = (value: number) => Math.min(1, Math.max(0, value))
 
-export function verdictPoints(correct: boolean): number {
-  return correct ? 1 : 0
-}
-
 export function flagPoints(found: number, total: number, wrong: number): number {
   if (total <= 0) return 0
   return clamp(found / total - WRONG_TAP_COST * wrong)
@@ -28,9 +24,11 @@ export function choicePoints(correct: boolean[], ticked: number[]): number {
   return clamp((right - wrong) / total)
 }
 
-// Each step is worth a third, so a perfect run is exactly 100.
+// Every step is worth the same (a third, or a quarter for ads and search results), so a
+// perfect run is exactly 100.
 export function scenarioPercent(steps: number[]): number {
+  if (steps.length === 0) return 0
   const sum = steps.reduce((total, points) => total + clamp(points), 0)
-  return Math.round((100 * sum) / 3)
+  return Math.round((100 * sum) / steps.length)
 }
 

@@ -9,11 +9,27 @@ import { Button } from './Button'
 import type { RenderText } from './views'
 
 const WORD_STYLES: Record<TokenMark['state'] | 'idle' | 'checking', string> = {
-  idle: 'cursor-pointer underline decoration-mist decoration-dotted decoration-2 underline-offset-4 hover:bg-sun/30 hover:decoration-navy',
+  idle: 'cursor-pointer underline decoration-current/60 decoration-dotted decoration-2 underline-offset-4 hover:bg-sun/30 hover:decoration-current',
   checking: 'bg-mist',
   found: 'bg-good-soft font-bold text-good',
   wrong: 'bg-bad-soft text-bad line-through decoration-2',
   missed: 'bg-miss-soft font-bold text-miss outline-2 outline-dashed outline-miss',
+}
+
+const ICON = 'size-9 shrink-0'
+
+// Drawn rather than emoji, so it looks the same on every phone.
+function MistakeIcon({ used }: { used: boolean }) {
+  return used ? (
+    <svg className={ICON} viewBox="0 0 32 32">
+      <circle cx="16" cy="16" r="14" fill="#ff5a5f" />
+      <path d="M10.5 10.5l11 11m0-11l-11 11" stroke="white" strokeWidth="3.5" strokeLinecap="round" />
+    </svg>
+  ) : (
+    <svg className={ICON} viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.5" opacity="0.55">
+      <circle cx="16" cy="16" r="13.5" />
+    </svg>
+  )
 }
 
 const keyOf = (segment: string, token: number) => `${segment}:${token}`
@@ -95,15 +111,25 @@ export function SpotText<R extends SpotResponse>({ flagCount, maxWrong, check, o
     })
 
   const found = latest?.found ?? 0
-  const wrongLeft = maxWrong - (latest?.wrong ?? 0)
+  const wrong = latest?.wrong ?? 0
 
   return (
     <>
-      <div aria-live="polite" className="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 text-xl font-bold">
+      {/* A circle turns into a cross for each wrong tap. */}
+      <div aria-live="polite" className="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-xl font-bold">
         <span>
           Red flags found: <span className="text-sun">{found}/{flagCount}</span>
         </span>
-        <span>Wrong guesses left: <span className="text-sun">{wrongLeft}</span></span>
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span>
+            Wrong guesses<span className="sr-only">: {wrong} of {maxWrong}</span>
+          </span>
+          <span aria-hidden="true" className="flex gap-1">
+            {Array.from({ length: maxWrong }, (_, i) => (
+              <MistakeIcon key={i} used={i < wrong} />
+            ))}
+          </span>
+        </span>
       </div>
 
       {children(render)}
@@ -112,7 +138,7 @@ export function SpotText<R extends SpotResponse>({ flagCount, maxWrong, check, o
 
       {!finished && (
         <Button look="plain" className="mt-5" onClick={() => void send(true)}>
-          I’m done
+          I can’t find more
         </Button>
       )}
     </>

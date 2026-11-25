@@ -1,4 +1,4 @@
-import type { PlayableAd, PlayableLanding, PlayableScenario, PlayableSearch } from '@/lib/exercises/types'
+import type { PlayableAd, PlayableCheck, PlayableLanding, PlayableScenario, PlayableSearch, ScenarioPart } from '@/lib/exercises/types'
 import { SPONSORED } from '@/lib/exercises/segments'
 
 import { BreakableUrl, ChatView, EmailView, lines, plainText, type RenderText } from '../level/views'
@@ -84,25 +84,62 @@ export function LandingView({ landing, text = plainText }: { landing: PlayableLa
   )
 }
 
-// The message itself and, once Anna has clicked, the page she landed on.
-export function ScenarioContentView({ scenario, text = plainText, showLanding }: {
+// What Anna finds when she checks a shop. A made-up review site, not a copy of a real one.
+export function CheckView({ check, text = plainText }: { check: PlayableCheck; text?: RenderText }) {
+  const score = Math.min(5, Math.max(0, parseFloat(check.rating.replace(',', '.')) || 0))
+  return (
+    <article className="on-paper rounded-2xl bg-paper p-5 text-ink sm:p-7">
+      {check.query && (
+        <p className="mb-5 rounded-full border-2 border-mist px-5 py-2">
+          <span className="sr-only">Search: </span>
+          {check.query}
+        </p>
+      )}
+      {check.site && (
+        <h2 className="font-display text-2xl font-extrabold">
+          Reviews of <span className={tight(text)}>{text('check.site', check.site)}</span>
+        </h2>
+      )}
+      {check.rating && (
+        <div className="mt-2 flex flex-wrap items-center gap-x-3">
+          <span aria-hidden="true" className="relative text-3xl leading-none tracking-widest text-mist">
+            ★★★★★
+            <span className="absolute inset-y-0 left-0 overflow-hidden whitespace-nowrap text-[#e8590c]" style={{ width: `${(score / 5) * 100}%` }}>
+              ★★★★★
+            </span>
+          </span>
+          <span className={`font-bold ${tight(text)}`}>{text('check.rating', check.rating)}</span>
+        </div>
+      )}
+      <ul className="mt-4 divide-y divide-mist">
+        {check.reviews.map((review, i) => (
+          <li key={i} className={`py-3 ${lines(text)}`}>
+            {text(`check.review.${i}`, review)}
+          </li>
+        ))}
+      </ul>
+    </article>
+  )
+}
+
+// One part of the scenario, each on its own step: the message, ad or result itself, the
+// page Anna landed on, or the reviews she found.
+export function ScenarioContentView({ scenario, text = plainText, part = 'content', intro }: {
   scenario: PlayableScenario
   text?: RenderText
-  showLanding: boolean
+  part?: ScenarioPart
+  intro?: string
 }) {
-  const { content, landing } = scenario
+  const { content, landing, check } = scenario
   return (
     <div className="flex flex-col gap-4">
-      {content.kind === 'email' && <EmailView email={content} text={text} />}
-      {content.kind === 'message' && <ChatView message={content} text={text} />}
-      {content.kind === 'ad' && <AdView ad={content} text={text} />}
-      {content.kind === 'search' && <SearchView search={content} text={text} />}
-      {showLanding && landing && (
-        <>
-          <p className="font-bold">Anna clicked it and landed on this page:</p>
-          <LandingView landing={landing} text={text} />
-        </>
-      )}
+      {intro && <p className="font-bold">{intro}</p>}
+      {part === 'landing' && landing && <LandingView landing={landing} text={text} />}
+      {part === 'check' && check && <CheckView check={check} text={text} />}
+      {part === 'content' && content.kind === 'email' && <EmailView email={content} text={text} />}
+      {part === 'content' && content.kind === 'message' && <ChatView message={content} text={text} />}
+      {part === 'content' && content.kind === 'ad' && <AdView ad={content} text={text} />}
+      {part === 'content' && content.kind === 'search' && <SearchView search={content} text={text} />}
     </div>
   )
 }

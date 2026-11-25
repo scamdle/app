@@ -26,7 +26,7 @@ export const GameSettings: GlobalConfig = {
               options: [...GAME_MODES],
               admin: {
                 description:
-                  '3 separate tasks: each daily set uses its 3 Exercises. 1 scenario in 3 steps: each daily set uses its Scenario (real or fake, back it up, what next).',
+                  '3 separate tasks: each daily set uses its 3 Exercises. 1 scenario in steps: each daily set uses its Scenario (what does it want, red flags, what next).',
               },
             },
             {

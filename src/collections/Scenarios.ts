@@ -1,20 +1,16 @@
 import { ValidationError, type ArrayField, type CollectionConfig } from 'payload'
 
 import { editorsOnly, emailGroup, explanationField, messageGroup, statusField } from '@/collections/shared/fields'
-import { AD_PLATFORMS, SCENARIO_MEDIA } from '@/lib/exercises/options'
+import { AD_PLATFORMS, SCENARIO_MEDIA, SCENARIO_WANTS } from '@/lib/exercises/options'
 import { scenarioProblems } from '@/lib/exercises/scenarioValidate'
 import { DEFAULT_REGION, REGIONS } from '@/lib/regions'
 
 type Data = Record<string, unknown>
 const usesMedium = (...media: string[]) => (data: Data) => media.includes(data?.medium as string)
-const isVerdict = (verdict: 'real' | 'fake') => (data: Data) => data?.verdict === verdict
 
-// `hidden` hides the whole list from the public API, not just the answers: only real
-// scenarios have "why is it real?" options, so even their texts would give the verdict away.
-const choices = (name: string, condition: (data: Data) => boolean, description: string, hidden = false): ArrayField => ({
+const choices = (name: string, condition: (data: Data) => boolean, description: string): ArrayField => ({
   name,
   type: 'array',
-  ...(hidden ? { access: editorsOnly } : {}),
   labels: { singular: 'Option', plural: 'Options' },
   admin: { condition, description },
   fields: [
@@ -24,13 +20,15 @@ const choices = (name: string, condition: (data: Data) => boolean, description: 
   ],
 })
 
-// One message played in three steps: real or fake? → back it up → what next?
+// Every scenario is a scam, played in steps: what does it want? → its red flags (ads and
+// search results: the ad or result, then the page; shops: then the reviews) → what next?
 export const Scenarios: CollectionConfig = {
   slug: 'scenarios',
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['title', 'medium', 'verdict', 'region', 'status'],
-    description: 'Used when Game settings → Mode is "1 scenario in 3 steps". Pick one per day in Daily sets.',
+    defaultColumns: ['title', 'medium', 'region', 'status'],
+    description:
+      'Used when Game settings → Mode is "1 scenario in steps". Every scenario is a scam, best based on a real reported one. Pick one per day in Daily sets.',
   },
   access: {
     read: ({ req: { user } }) => (user ? true : { status: { equals: 'published' } }),
@@ -106,7 +104,7 @@ export const Scenarios: CollectionConfig = {
       label: 'Landing page',
       admin: {
         condition: usesMedium('ad', 'search'),
-        description: 'The page Anna lands on after clicking. Shown from step 2, and its words can be red flags too.',
+        description: 'The page Anna lands on after clicking. It gets its own step, and its words can be red flags too.',
       },
       fields: [
         {
@@ -122,33 +120,57 @@ export const Scenarios: CollectionConfig = {
       ],
     },
 
-    // Step 1
     {
-      name: 'verdict',
-      type: 'radio',
-      access: editorsOnly,
-      options: [
-        { label: 'Real', value: 'real' },
-        { label: 'Fake', value: 'fake' },
+      name: 'check',
+      type: 'group',
+      label: 'Anna checks the reviews (optional)',
+      admin: {
+        description:
+          'For fake shops whose page looks fine: what Anna finds when she searches for reviews. Drawn as a review site, with its own step. Leave empty to skip.',
+      },
+      fields: [
+        {
+          type: 'row',
+          fields: [
+            { name: 'query', type: 'text', admin: { description: 'What Anna searched, e.g. nordic shoes outlet reviews' } },
+            { name: 'site', type: 'text', admin: { description: 'The shop being reviewed, e.g. nordic-shoes-outlet.shop' } },
+          ],
+        },
+        { name: 'rating', type: 'text', admin: { description: 'Starts with the score, e.g. "1.4 out of 5 from 212 reviews". The stars are drawn from the first number.' } },
+        {
+          name: 'reviews',
+          type: 'array',
+          labels: { singular: 'Review', plural: 'Reviews' },
+          fields: [{ name: 'text', type: 'textarea', required: true }],
+        },
       ],
-      admin: { description: 'Step 1: players guess this. If they get it wrong they only hear the answer, not why.' },
-    },
-    {
-      name: 'verdictReason',
-      type: 'textarea',
-      access: editorsOnly,
-      admin: { description: 'Why it is real or fake. Shown on the summary at the end.' },
     },
 
-    // Step 2
+    // Step 1
+    {
+      name: 'wants',
+      type: 'select',
+      hasMany: true,
+      access: editorsOnly,
+      options: [...SCENARIO_WANTS],
+      admin: { description: 'Step 1: "What is this trying to get Anna to do?" Pick every answer that is visible on the first screen.' },
+    },
+    {
+      name: 'wantsExplanation',
+      type: 'textarea',
+      access: editorsOnly,
+      admin: { description: 'Shown under the right answers in step 1, e.g. "Shop now" leads to a payment page.' },
+    },
+
+    // Red flags
     {
       name: 'flags',
       type: 'array',
       access: editorsOnly,
       labels: { singular: 'Red flag', plural: 'Red flags' },
       admin: {
-        condition: isVerdict('fake'),
-        description: 'Step 2 for fakes: copy the exact text from the message (or landing page), then explain why it is suspicious.',
+        description:
+          'Copy the exact text, then explain why it is suspicious. Each flag is asked in every step where its text appears: the message, ad or result, the landing page, the reviews.',
       },
       fields: [
         { name: 'text', type: 'text', required: true },
@@ -160,20 +182,32 @@ export const Scenarios: CollectionConfig = {
       type: 'number',
       min: 1,
       defaultValue: 3,
-      admin: { condition: isVerdict('fake'), description: 'How many wrong taps end step 2. Correct taps are free.' },
+      admin: { description: 'How many wrong taps end a red-flag step. Correct taps are free.' },
     },
-    choices('whyReal', isVerdict('real'), 'Step 2 for real ones: "Why is this real?" Tick every option that is a good reason.', true),
 
-    // Step 3
+    // Last step
     {
       name: 'nextPrompt',
       type: 'text',
       defaultValue: 'What should Anna do next?',
-      admin: { description: 'Step 3 question, e.g. "How can Anna check this shop is real before paying?"' },
+      admin: { description: 'The last step\'s question, e.g. "How can Anna check this shop is real before paying?"' },
     },
-    choices('nextOptions', () => true, 'Step 3 options. Tick every option that is correct.'),
+    choices('nextOptions', () => true, 'Last step options. Tick every option that is correct.'),
 
-    explanationField('Optional lesson shown on the summary at the end.'),
+    {
+      name: 'verdictReason',
+      label: 'Why it is a scam',
+      type: 'textarea',
+      access: editorsOnly,
+      admin: { description: 'Shown on the summary at the end.' },
+    },
+    explanationField('Optional lesson or what happened next, shown on the summary, e.g. what Anna found when she checked.'),
+    {
+      name: 'basedOn',
+      type: 'text',
+      access: editorsOnly,
+      admin: { description: 'Optional: link to the real warning this is based on (police, CERT-EE, a bank). Editors only.' },
+    },
     statusField,
   ],
 }

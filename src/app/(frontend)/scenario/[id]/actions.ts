@@ -5,7 +5,9 @@ import { getPayload } from 'payload'
 
 import { feedbackProblem, type FeedbackInput } from '@/lib/feedback'
 import { loadScenario } from '@/lib/exercises/load'
-import { textSegments } from '@/lib/exercises/segments'
+import { SCENARIO_WANTS } from '@/lib/exercises/options'
+import { flagInPart, partSegments, SCENARIO_PARTS, type ScenarioPart } from '@/lib/exercises/segments'
+import { scenarioFlagSteps } from '@/lib/exercises/toPlayableScenario'
 import type {
   ResultItem,
   ScenarioAnswers,
@@ -13,10 +15,8 @@ import type {
   ScenarioGuessResponse,
   ScenarioStepResult,
   ScenarioSummary,
-  ScenarioVerdictResponse,
-  Verdict,
 } from '@/lib/exercises/types'
-import { choicePoints, flagPoints, scenarioPercent, verdictPoints } from '@/lib/scoring/scenario'
+import { choicePoints, flagPoints, scenarioPercent } from '@/lib/scoring/scenario'
 import { scoreTextFlags, type Guess } from '@/lib/scoring/textFlags'
 import { DEFAULT_REGION } from '@/lib/regions'
 import { getGameSettings } from '@/lib/settings'
@@ -27,7 +27,6 @@ import type { Scenario } from '@/payload-types'
 
 const LIMIT = 500
 
-const isVerdict = (v: unknown): v is Verdict => v === 'real' || v === 'fake'
 const isGuess = (g: unknown): g is Guess =>
   typeof g === 'object' && g !== null && typeof (g as Guess).segment === 'string' && Number.isInteger((g as Guess).token)
 const isTicks = (t: unknown): t is number[] => Array.isArray(t) && t.length <= LIMIT && t.every(Number.isInteger)
@@ -35,14 +34,19 @@ const isGuesses = (g: unknown): g is Guess[] => Array.isArray(g) && g.length <= 
 
 async function load(id: unknown): Promise<Scenario> {
   const scenario = await loadScenario(id)
-  if (!scenario || !isVerdict(scenario.verdict)) throw new Error('Scenario not found')
+  if (!scenario) throw new Error('Scenario not found')
   return scenario
 }
 
-function flagStep(s: Scenario, guesses: Guess[], giveUp: boolean) {
-  const flags = s.flags ?? []
+const isPart = (p: unknown): p is ScenarioPart => SCENARIO_PARTS.includes(p as ScenarioPart)
+
+// Red flags of one part: the message, ad or result itself, the page, or the reviews.
+const partFlags = (s: Scenario, part: ScenarioPart) => (s.flags ?? []).filter((f) => flagInPart(s, f.text, part))
+
+function flagStep(s: Scenario, part: ScenarioPart, guesses: Guess[], giveUp: boolean) {
+  const flags = partFlags(s, part)
   const maxWrong = s.maxWrongGuesses ?? 3
-  const score = scoreTextFlags({ segments: textSegments(s), flags: flags.map((f) => f.text), guesses, maxWrong, giveUp })
+  const score = scoreTextFlags({ segments: partSegments(s, part), flags: flags.map((f) => f.text), guesses, maxWrong, giveUp })
   const step: ScenarioStepResult = {
     points: flagPoints(score.found.length, flags.length, score.wrong.length),
     items: [
@@ -54,7 +58,16 @@ function flagStep(s: Scenario, guesses: Guess[], giveUp: boolean) {
   return { score, step, flags, maxWrong }
 }
 
-function choiceStep(options: NonNullable<Scenario['nextOptions']>, ticked: number[]) {
+type Option = { text: string; isCorrect?: boolean | null; explanation?: string | null }
+
+// Step 1's fixed answers. The scenario says which ones fit, with one explanation for those.
+const wantOptions = (s: Scenario): Option[] =>
+  SCENARIO_WANTS.map((want) => {
+    const isCorrect = (s.wants ?? []).includes(want.value)
+    return { text: want.label, isCorrect, explanation: isCorrect ? (s.wantsExplanation ?? null) : null }
+  })
+
+function choiceStep(options: Option[], ticked: number[]) {
   const correct = options.map((option) => option.isCorrect === true)
   const step: ScenarioStepResult = {
     points: choicePoints(correct, ticked),
@@ -69,27 +82,12 @@ function choiceStep(options: NonNullable<Scenario['nextOptions']>, ticked: numbe
   return { correct, step }
 }
 
-// Step 1. Only says what it was: the reason waits for the summary, so steps 2 and 3 aren't spoiled.
-export async function answerScenarioVerdict(id: number, answer: Verdict): Promise<ScenarioVerdictResponse> {
-  if (!isVerdict(answer)) throw new Error('Invalid answer')
+// Red flags, one part at a time.
+export async function guessScenarioFlags(id: number, part: ScenarioPart, guesses: Guess[], giveUp = false): Promise<ScenarioGuessResponse> {
+  if (!isPart(part) || !isGuesses(guesses)) throw new Error('Invalid guesses')
   const s = await load(id)
-  const verdict = s.verdict as Verdict
-  return {
-    correct: verdict === answer,
-    verdict,
-    step2:
-      verdict === 'fake'
-        ? { kind: 'flags', flagCount: s.flags?.length ?? 0, maxWrong: s.maxWrongGuesses ?? 3 }
-        : { kind: 'why', options: (s.whyReal ?? []).map((option) => option.text) },
-  }
-}
-
-// Step 2 for fakes.
-export async function guessScenarioFlags(id: number, guesses: Guess[], giveUp = false): Promise<ScenarioGuessResponse> {
-  if (!isGuesses(guesses)) throw new Error('Invalid guesses')
-  const s = await load(id)
-  if (s.verdict !== 'fake') throw new Error('This scenario has no red flags')
-  const { score, step, flags, maxWrong } = flagStep(s, guesses, giveUp === true)
+  const { score, step, flags, maxWrong } = flagStep(s, part, guesses, giveUp === true)
+  if (flags.length === 0) throw new Error('This part has no red flags')
   return {
     found: score.found.length,
     total: flags.length,
@@ -100,25 +98,30 @@ export async function guessScenarioFlags(id: number, guesses: Guess[], giveUp = 
   }
 }
 
-// Step 2 for real ones ("why is this real?") and step 3 ("what next?").
-export async function answerScenarioChoices(id: number, which: 'why' | 'next', ticked: number[]): Promise<ScenarioChoiceResponse> {
-  if ((which !== 'why' && which !== 'next') || !isTicks(ticked)) throw new Error('Invalid answer')
+// Step 1 ("what does it want?") and the last step ("what next?").
+export async function answerScenarioChoices(id: number, which: 'wants' | 'next', ticked: number[]): Promise<ScenarioChoiceResponse> {
+  if ((which !== 'wants' && which !== 'next') || !isTicks(ticked)) throw new Error('Invalid answer')
   const s = await load(id)
-  if (which === 'why' && s.verdict !== 'real') throw new Error('This scenario has no reasons to choose')
-  return choiceStep((which === 'why' ? s.whyReal : s.nextOptions) ?? [], ticked)
+  return choiceStep(which === 'wants' ? wantOptions(s) : (s.nextOptions ?? []), ticked)
 }
 
 // Replays every answer, so the score is the server's own. A future "you beat X% of
 // players today" feature can save this number and trust it.
+const STEP_NAMES: Record<ScenarioPart, string> = { content: 'Red flags', landing: 'The page', check: 'The reviews' }
+
 async function score(s: Scenario, answers: ScenarioAnswers): Promise<ScenarioSummary> {
-  const verdict = s.verdict as Verdict
-  const step1 = verdictPoints(answers.verdict === verdict)
-  const step2 = verdict === 'fake' ? flagStep(s, answers.guesses, true).step.points : choiceStep(s.whyReal ?? [], answers.whyTicked).step.points
-  const step3 = choiceStep(s.nextOptions ?? [], answers.nextTicked).step.points
+  const first = s.medium === 'search' ? 'The search result' : s.medium === 'ad' ? 'The ad' : STEP_NAMES.content
+  const steps = [
+    ...(s.wants?.length ? [{ name: 'What it wants', points: choiceStep(wantOptions(s), answers.wantsTicked).step.points }] : []),
+    ...scenarioFlagSteps(s).map(({ part }) => ({
+      name: part === 'content' ? first : STEP_NAMES[part],
+      points: flagStep(s, part, answers.guesses[part], true).step.points,
+    })),
+    { name: 'What to do next', points: choiceStep(s.nextOptions ?? [], answers.nextTicked).step.points },
+  ]
   return {
-    percent: scenarioPercent([step1, step2, step3]),
-    steps: [step1, step2, step3],
-    verdict,
+    percent: scenarioPercent(steps.map((step) => step.points)),
+    steps,
     verdictReason: s.verdictReason ?? null,
     explanation: s.explanation ?? null,
   }
@@ -126,7 +129,15 @@ async function score(s: Scenario, answers: ScenarioAnswers): Promise<ScenarioSum
 
 const isAnswers = (a: unknown): a is ScenarioAnswers => {
   const x = a as ScenarioAnswers
-  return typeof x === 'object' && x !== null && isVerdict(x.verdict) && isGuesses(x.guesses) && isTicks(x.whyTicked) && isTicks(x.nextTicked)
+  return (
+    typeof x === 'object' &&
+    x !== null &&
+    isTicks(x.wantsTicked) &&
+    typeof x.guesses === 'object' &&
+    x.guesses !== null &&
+    SCENARIO_PARTS.every((part) => isGuesses(x.guesses[part])) &&
+    isTicks(x.nextTicked)
+  )
 }
 
 export async function finishScenario(id: number, answers: ScenarioAnswers): Promise<ScenarioSummary> {
@@ -145,7 +156,7 @@ export async function submitFeedback(input: FeedbackInput, answers: ScenarioAnsw
   if (!isAnswers(answers)) return { ok: false, error: 'Invalid answers' }
 
   const s = await loadScenario(input.scenarioId)
-  if (!s || s.status !== 'published' || !isVerdict(s.verdict)) return { ok: false, error: 'Scenario not found' }
+  if (!s || s.status !== 'published') return { ok: false, error: 'Scenario not found' }
   const { percent } = await score(s, answers)
 
   const payload = await getPayload({ config })
