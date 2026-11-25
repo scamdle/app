@@ -283,7 +283,7 @@ export interface Exercise {
   createdAt: string;
 }
 /**
- * Used when Game settings → Mode is "1 scenario in 3 steps". Pick one per day in Daily sets.
+ * Used when Game settings → Mode is "1 scenario in steps". Every scenario is a scam, best based on a real reported one. Pick one per day in Daily sets.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "scenarios".
@@ -368,7 +368,7 @@ export interface Scenario {
     snippet?: string | null;
   };
   /**
-   * The page Anna lands on after clicking. Shown from step 2, and its words can be red flags too.
+   * The page Anna lands on after clicking. It gets its own step, and its words can be red flags too.
    */
   landing?: {
     /**
@@ -387,15 +387,38 @@ export interface Scenario {
     buttonText?: string | null;
   };
   /**
-   * Step 1: players guess this. If they get it wrong they only hear the answer, not why.
+   * For fake shops whose page looks fine: what Anna finds when she searches for reviews. Drawn as a review site, with its own step. Leave empty to skip.
    */
-  verdict?: ('real' | 'fake') | null;
+  check?: {
+    /**
+     * What Anna searched, e.g. nordic shoes outlet reviews
+     */
+    query?: string | null;
+    /**
+     * The shop being reviewed, e.g. nordic-shoes-outlet.shop
+     */
+    site?: string | null;
+    /**
+     * Starts with the score, e.g. "1.4 out of 5 from 212 reviews". The stars are drawn from the first number.
+     */
+    rating?: string | null;
+    reviews?:
+      | {
+          text: string;
+          id?: string | null;
+        }[]
+      | null;
+  };
   /**
-   * Why it is real or fake. Shown on the summary at the end.
+   * Step 1: "What is this trying to get Anna to do?" Pick every answer that is visible on the first screen.
    */
-  verdictReason?: string | null;
+  wants?: ('pay' | 'details' | 'code' | 'call')[] | null;
   /**
-   * For fakes: copy the exact text, then explain why it is suspicious. Ads and search results: flags in the ad or result are asked in step 2, flags on the landing page in step 3.
+   * Shown under the right answers in step 1, e.g. "Shop now" leads to a payment page.
+   */
+  wantsExplanation?: string | null;
+  /**
+   * Copy the exact text, then explain why it is suspicious. Each flag is asked in every step where its text appears: the message, ad or result, the landing page, the reviews.
    */
   flags?:
     | {
@@ -408,34 +431,6 @@ export interface Scenario {
    * How many wrong taps end a red-flag step. Correct taps are free.
    */
   maxWrongGuesses?: number | null;
-  /**
-   * Step 2 for real ones: "Why is this real?" Tick every option that is a good reason.
-   */
-  whyReal?:
-    | {
-        text: string;
-        isCorrect?: boolean | null;
-        /**
-         * Shown after the player checks.
-         */
-        explanation?: string | null;
-        id?: string | null;
-      }[]
-    | null;
-  /**
-   * Step 3 for real ads and search results: "Why is this page real?" about the landing page. Leave empty to skip the page step.
-   */
-  pageWhyReal?:
-    | {
-        text: string;
-        isCorrect?: boolean | null;
-        /**
-         * Shown after the player checks.
-         */
-        explanation?: string | null;
-        id?: string | null;
-      }[]
-    | null;
   /**
    * The last step's question, e.g. "How can Anna check this shop is real before paying?"
    */
@@ -455,7 +450,11 @@ export interface Scenario {
       }[]
     | null;
   /**
-   * Optional lesson shown on the summary at the end.
+   * Shown on the summary at the end.
+   */
+  verdictReason?: string | null;
+  /**
+   * Optional lesson or what happened next, shown on the summary, e.g. what Anna found when she checked.
    */
   explanation?: {
     root: {
@@ -472,6 +471,10 @@ export interface Scenario {
     };
     [k: string]: unknown;
   } | null;
+  /**
+   * Optional: link to the real warning this is based on (police, CERT-EE, a bank). Editors only.
+   */
+  basedOn?: string | null;
   status: 'draft' | 'in-review' | 'published';
   updatedAt: string;
   createdAt: string;
@@ -785,8 +788,21 @@ export interface ScenariosSelect<T extends boolean = true> {
         body?: T;
         buttonText?: T;
       };
-  verdict?: T;
-  verdictReason?: T;
+  check?:
+    | T
+    | {
+        query?: T;
+        site?: T;
+        rating?: T;
+        reviews?:
+          | T
+          | {
+              text?: T;
+              id?: T;
+            };
+      };
+  wants?: T;
+  wantsExplanation?: T;
   flags?:
     | T
     | {
@@ -795,22 +811,6 @@ export interface ScenariosSelect<T extends boolean = true> {
         id?: T;
       };
   maxWrongGuesses?: T;
-  whyReal?:
-    | T
-    | {
-        text?: T;
-        isCorrect?: T;
-        explanation?: T;
-        id?: T;
-      };
-  pageWhyReal?:
-    | T
-    | {
-        text?: T;
-        isCorrect?: T;
-        explanation?: T;
-        id?: T;
-      };
   nextPrompt?: T;
   nextOptions?:
     | T
@@ -820,7 +820,9 @@ export interface ScenariosSelect<T extends boolean = true> {
         explanation?: T;
         id?: T;
       };
+  verdictReason?: T;
   explanation?: T;
+  basedOn?: T;
   status?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -902,7 +904,7 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
 export interface GameSetting {
   id: number;
   /**
-   * 3 separate tasks: each daily set uses its 3 Exercises. 1 scenario in 3 steps: each daily set uses its Scenario (real or fake, back it up, what next).
+   * 3 separate tasks: each daily set uses its 3 Exercises. 1 scenario in steps: each daily set uses its Scenario (what does it want, red flags, what next).
    */
   mode: 'three-tasks' | 'scenario';
   /**

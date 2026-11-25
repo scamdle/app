@@ -45,27 +45,25 @@ export type OptionsResponse = { correct: boolean[]; result: LevelResult }
 
 export type { Guess }
 
-// Scenario mode: one message, three steps. Step 2 depends on the verdict, so its data
-// only arrives with the step 1 answer: sending it up front would give the verdict away.
+// Scenario mode: every scenario is a scam. Step 1 asks what it wants Anna to do, then one
+// red-flag step per part (message, ad or result; the page; the reviews), then what next.
 export type ScenarioContent = PlayableEmail | PlayableMessage | PlayableAd | PlayableSearch
 
+export type PlayableCheck = { query: string; site: string; rating: string; reviews: string[] }
+
+export type ScenarioPart = 'content' | 'landing' | 'check'
+export type ScenarioFlagStep = { part: ScenarioPart; flagCount: number; maxWrong: number }
+
+// Everything the browser gets before answering: no answers, only how many flags each step has.
 export type PlayableScenario = Base & {
   content: ScenarioContent
   landing: PlayableLanding | null
+  check: PlayableCheck | null
+  wantOptions: string[] | null
+  flagSteps: ScenarioFlagStep[]
   nextPrompt: string
   nextOptions: string[]
 }
-
-export type Verdict = 'real' | 'fake'
-
-// A "back it up" step: tap the red flags (fakes) or tick why it's real (real ones).
-// Ads and search results get one for the ad or result and one for the page Anna lands on.
-export type ScenarioPart = 'content' | 'landing'
-export type ScenarioBackup =
-  | { part: ScenarioPart; kind: 'flags'; flagCount: number; maxWrong: number }
-  | { part: ScenarioPart; kind: 'why'; options: string[] }
-
-export type ScenarioVerdictResponse = { correct: boolean; verdict: Verdict; backups: ScenarioBackup[] }
 
 // `points` runs from 0 to 1; every step is worth the same share of the score.
 export type ScenarioStepResult = { points: number; items: ResultItem[] }
@@ -82,18 +80,14 @@ export type ScenarioGuessResponse = {
 export type ScenarioChoiceResponse = { correct: boolean[]; step: ScenarioStepResult }
 
 export type ScenarioAnswers = {
-  verdict: Verdict
-  guesses: Guess[]
-  pageGuesses: Guess[]
-  whyTicked: number[]
-  pageWhyTicked: number[]
+  wantsTicked: number[]
+  guesses: Record<ScenarioPart, Guess[]>
   nextTicked: number[]
 }
 
 export type ScenarioSummary = {
   percent: number
   steps: { name: string; points: number }[]
-  verdict: Verdict
   verdictReason: string | null
   explanation: unknown
 }

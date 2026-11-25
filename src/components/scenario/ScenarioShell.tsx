@@ -7,18 +7,16 @@ import { useEffect, useId, useRef, useState } from 'react'
 
 import {
   answerScenarioChoices,
-  answerScenarioVerdict,
   finishScenario,
   guessScenarioFlags,
 } from '@/app/(frontend)/scenario/[id]/actions'
 import type {
   PlayableScenario,
   ScenarioAnswers,
-  ScenarioBackup,
+  ScenarioFlagStep,
+  ScenarioPart,
   ScenarioStepResult,
   ScenarioSummary,
-  ScenarioVerdictResponse,
-  Verdict,
 } from '@/lib/exercises/types'
 import type { FeedbackForm as FeedbackFormData } from '@/lib/feedback'
 import { feedbackGiven, saveBestScore } from '@/lib/progress'
@@ -32,18 +30,12 @@ import { SpotText } from '../level/SpotText'
 import { FeedbackForm } from './FeedbackForm'
 import { ScenarioContentView } from './views'
 
-const CHOICES = [
-  { value: 'fake', label: 'Fake', mark: '✕', style: 'border-bad text-bad' },
-  { value: 'real', label: 'Real', mark: '✓', style: 'border-good text-good' },
-] as const
-
 type Phase = 'play' | 'summary' | 'feedback' | 'thanks'
 
-// Real or fake → one "back it up" step per part (ads and search results: the ad or result,
-// then the page) → what next. The middle steps are only known once the verdict is in.
-type Step = { kind: 'verdict' } | { kind: 'backup'; backup: ScenarioBackup } | { kind: 'next' }
+// What does it want? → one red-flag step per part that has flags → what next?
+type Step = { kind: 'wants' } | { kind: 'flags'; flags: ScenarioFlagStep } | { kind: 'next' }
 
-const SHARE: Record<number, string> = { 2: 'half', 3: 'a third', 4: 'a quarter' }
+const SHARE: Record<number, string> = { 2: 'half', 3: 'a third', 4: 'a quarter', 5: 'a fifth' }
 
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`
 
@@ -70,48 +62,32 @@ export function ScenarioShell({ scenario, day, feedback }: {
   const [stepIndex, setStepIndex] = useState(0)
   const [error, setError] = useState(false)
 
-  const [verdict, setVerdict] = useState<ScenarioVerdictResponse | null>(null)
-  const [picked, setPicked] = useState<Verdict | null>(null)
   // The current step's result, once it's answered. Cleared when moving on.
   const [result, setResult] = useState<ScenarioStepResult | null>(null)
   const [summary, setSummary] = useState<ScenarioSummary | null>(null)
   const [busy, setBusy] = useState(false)
-  const answers = useRef<ScenarioAnswers>({ verdict: 'fake', guesses: [], pageGuesses: [], whyTicked: [], pageWhyTicked: [], nextTicked: [] })
+  const answers = useRef<ScenarioAnswers>({ wantsTicked: [], guesses: { content: [], landing: [], check: [] }, nextTicked: [] })
 
   const hasPage = scenario.landing !== null
-  const thing = scenario.content.kind === 'search' ? 'search result' : scenario.content.kind === 'ad' ? 'ad' : 'message'
   const steps: Step[] = [
-    { kind: 'verdict' },
-    ...(verdict?.backups ?? []).map((backup): Step => ({ kind: 'backup', backup })),
+    ...(scenario.wantOptions ? [{ kind: 'wants' } as const] : []),
+    ...scenario.flagSteps.map((flags): Step => ({ kind: 'flags', flags })),
     { kind: 'next' },
   ]
-  // Before the verdict, assume the usual: an ad or result has a page step too.
-  const stepCount = verdict ? steps.length : hasPage ? 4 : 3
+  const stepCount = steps.length
   const step = steps[stepIndex]
   const isLast = step.kind === 'next'
 
   const heading = useFocusOnChange(intro ? null : `${phase}-${stepIndex}`)
   const askFeedback = Boolean(feedback && day && !feedbackGiven(day))
-  const howTo = hasPage
-    ? `Four steps: decide if the ${thing} is real or fake, show why, look at the page Anna lands on, then choose what to do next.`
-    : 'Three steps: decide if it’s real or fake, show why, then choose what to do next.'
-  // Wherever Anna clicked, she ends up on the page, even when it's a fake.
-  const landingIntro = verdict?.verdict === 'fake' ? 'Anna clicked it anyway and landed on this page:' : 'Anna clicked it and landed on this page:'
-
-  const choose = async (value: Verdict) => {
-    setPicked(value)
-    try {
-      const response = await answerScenarioVerdict(scenario.id, value)
-      answers.current.verdict = value
-      setVerdict(response)
-      setError(false)
-    } catch {
-      setPicked(null)
-      setError(true)
-    }
+  const howTo = `${stepCount} short steps: find what this scam wants, spot the red flags, then choose what to do next.`
+  const intros: Record<ScenarioPart, string | undefined> = {
+    content: undefined,
+    landing: 'Anna clicked it anyway and landed on this page:',
+    check: 'Before paying, Anna looks for reviews. This is what she finds:',
   }
 
-  const part = step.kind === 'backup' ? step.backup.part : 'content'
+  const part = step.kind === 'flags' ? step.flags.part : 'content'
   const checkWords = (guesses: Guess[], giveUp: boolean) =>
     guessScenarioFlags(scenario.id, part, guesses, giveUp).then((response) => ({ ...response, done: Boolean(response.step) }))
 
@@ -136,23 +112,13 @@ export function ScenarioShell({ scenario, day, feedback }: {
   }
 
   // The one thing to do on this step, shown big. `detail` is the smaller how-to under it.
-  const backup = step.kind === 'backup' ? step.backup : null
   const instruction =
-    step.kind === 'verdict'
-      ? 'Look closely. Is this real or fake?'
+    step.kind === 'wants'
+      ? 'What is this trying to get Anna to do?'
       : step.kind === 'next'
         ? scenario.nextPrompt
-        : backup?.kind === 'flags'
-          ? `Find ${plural(backup.flagCount, 'red flag', 'red flags')}.`
-          : part === 'landing'
-            ? 'Why is this page real?'
-            : hasPage
-              ? `Why is this ${thing} real?`
-              : 'Why is this real?'
-  const detail =
-    backup?.kind === 'flags'
-      ? 'Tap anything that looks suspicious.'
-      : null
+        : `Find ${plural(step.flags.flagCount, 'red flag', 'red flags')}.`
+  const detail = step.kind === 'flags' ? 'Tap anything that looks suspicious.' : null
 
   const continueButton = (
     <Button className="mt-6 w-full sm:w-auto" onClick={() => void (isLast ? busy || finish() : goNext())}>
@@ -161,9 +127,6 @@ export function ScenarioShell({ scenario, day, feedback }: {
   )
 
   const explanation = summary?.explanation as Parameters<typeof RichText>[0]['data'] | null
-
-  // The view next to a step: the ad or result itself, or the page once Anna has clicked.
-  const view = (where: 'content' | 'landing', intro?: string) => <ScenarioContentView scenario={scenario} part={where} intro={intro} />
 
   return (
     <main className="mx-auto max-w-5xl px-4 pt-4 pb-10">
@@ -198,54 +161,36 @@ export function ScenarioShell({ scenario, day, feedback }: {
         </div>
       )}
 
-      {phase === 'play' && step.kind === 'verdict' && (
-        <>
-          {view('content')}
-          <div className="mt-5 grid grid-cols-2 gap-4">
-            {CHOICES.map((choice) => (
-              <button
-                key={choice.value}
-                type="button"
-                disabled={picked !== null}
-                aria-pressed={picked === choice.value}
-                onClick={() => void choose(choice.value)}
-                className={`flex cursor-pointer flex-col items-center rounded-2xl border-[6px] bg-paper py-4 font-display disabled:cursor-default ${choice.style} ${picked && picked !== choice.value ? 'opacity-60' : ''}`}
-              >
-                <span aria-hidden="true" className="text-7xl leading-none font-black">{choice.mark}</span>
-                <span className="mt-1 text-2xl font-extrabold">{choice.label}</span>
-                {picked === choice.value && <span className="font-body text-lg font-bold text-ink">Your answer</span>}
-              </button>
-            ))}
+      {phase === 'play' && step.kind === 'wants' && scenario.wantOptions && (
+        <div key={stepIndex}>
+          <div className="grid items-start gap-5 md:grid-cols-2">
+            <ScenarioContentView scenario={scenario} />
+            <ChoiceList
+              options={scenario.wantOptions}
+              submit={async (ticked) => {
+                const response = await answerScenarioChoices(scenario.id, 'wants', ticked)
+                answers.current.wantsTicked = ticked
+                setResult(response.step)
+                return { correct: response.correct, reasons: response.step.items.map((item) => item.reason) }
+              }}
+            />
           </div>
-          {verdict && (
-            <section aria-live="polite" className="on-paper mt-6 rounded-2xl bg-paper p-5 text-ink sm:p-7">
-              <p className={`font-display text-3xl font-extrabold ${verdict.correct ? 'text-good' : 'text-bad'}`}>
-                {verdict.correct ? `Right, it’s ${verdict.verdict}.` : `Not quite: it’s ${verdict.verdict}.`}
-              </p>
-              <p className="mt-2">
-                {verdict.verdict === 'fake' ? 'Next, find what gives it away.' : 'Next, choose what shows it’s real.'} We’ll explain everything at the end.
-              </p>
-              <Button className="mt-5 w-full sm:w-auto" autoFocus onClick={goNext}>
-                Continue
-              </Button>
-            </section>
-          )}
-        </>
+          {result && continueButton}
+        </div>
       )}
 
-      {phase === 'play' && step.kind === 'backup' && step.backup.kind === 'flags' && (
+      {phase === 'play' && step.kind === 'flags' && (
         <div key={stepIndex}>
           <SpotText
-            flagCount={step.backup.flagCount}
-            maxWrong={step.backup.maxWrong}
+            flagCount={step.flags.flagCount}
+            maxWrong={step.flags.maxWrong}
             check={checkWords}
             onDone={(response, guesses) => {
-              if (part === 'landing') answers.current.pageGuesses = guesses
-              else answers.current.guesses = guesses
+              answers.current.guesses[part] = guesses
               setResult(response.step)
             }}
           >
-            {(text) => <ScenarioContentView scenario={scenario} text={text} part={part} intro={part === 'landing' ? landingIntro : undefined} />}
+            {(text) => <ScenarioContentView scenario={scenario} text={text} part={part} intro={intros[part]} />}
           </SpotText>
           {result && (
             <Results
@@ -258,30 +203,11 @@ export function ScenarioShell({ scenario, day, feedback }: {
         </div>
       )}
 
-      {phase === 'play' && step.kind === 'backup' && step.backup.kind === 'why' && (
-        <div key={stepIndex}>
-          <div className="grid items-start gap-5 md:grid-cols-2">
-            {view(part, part === 'landing' ? landingIntro : undefined)}
-            <ChoiceList
-              options={step.backup.options}
-              submit={async (ticked) => {
-                const response = await answerScenarioChoices(scenario.id, part === 'landing' ? 'pageWhy' : 'why', ticked)
-                if (part === 'landing') answers.current.pageWhyTicked = ticked
-                else answers.current.whyTicked = ticked
-                setResult(response.step)
-                return { correct: response.correct, reasons: response.step.items.map((item) => item.reason) }
-              }}
-            />
-          </div>
-          {result && continueButton}
-        </div>
-      )}
-
       {phase === 'play' && step.kind === 'next' && (
         <div key={stepIndex}>
           <div className="grid items-start gap-5 md:grid-cols-2">
             {/* Anna is on the page by now, so ads and results show only that. */}
-            {view(hasPage ? 'landing' : 'content', hasPage ? 'Anna is on this page:' : undefined)}
+            <ScenarioContentView scenario={scenario} part={hasPage ? 'landing' : 'content'} intro={hasPage ? 'Anna is on this page:' : undefined} />
             <ChoiceList
               options={scenario.nextOptions}
               submit={async (ticked) => {
@@ -311,7 +237,7 @@ export function ScenarioShell({ scenario, day, feedback }: {
               </li>
             ))}
           </ul>
-          <h3 className="mt-6 font-display text-2xl font-extrabold">This {thing} was {summary.verdict}</h3>
+          <h3 className="mt-6 font-display text-2xl font-extrabold">How this scam works</h3>
           {summary.verdictReason && <p className="mt-2 whitespace-pre-wrap">{summary.verdictReason}</p>}
           {explanation?.root && <RichText data={explanation} className="mt-4 border-t-2 border-mist pt-4" />}
           {askFeedback ? (

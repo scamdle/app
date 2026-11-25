@@ -5,10 +5,6 @@ export const WRONG_TAP_COST = 0.1
 
 const clamp = (value: number) => Math.min(1, Math.max(0, value))
 
-export function verdictPoints(correct: boolean): number {
-  return correct ? 1 : 0
-}
-
 export function flagPoints(found: number, total: number, wrong: number): number {
   if (total <= 0) return 0
   return clamp(found / total - WRONG_TAP_COST * wrong)

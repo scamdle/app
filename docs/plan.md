@@ -49,10 +49,10 @@ Version 1 (15 January) covers the daily set, all four exercise formats, the guid
 
 | Priority | Requirement |
 | --- | --- |
-| Must | A daily set per region, chosen by hand in the admin for now: 3 exercises (3-task mode) or 1 scenario in 3 steps (scenario mode), switched in Game settings |
+| Must | A daily set per region, chosen by hand in the admin for now: 3 exercises (3-task mode) or 1 scenario in steps (scenario mode), switched in Game settings |
 | Must | Persona card: Anna, the fictional person every exercise is addressed to |
 | Must | Engine: spot the red flags. Tap suspicious text in emails, links, messages, ads, search results and landing pages |
-| Must | Engine: real or fake for links (3-task mode) and for every scenario |
+| Must | Engine: real or fake for links (3-task mode) and "what does it want?" for every scenario |
 | Must | Engine: what would you do next? Tick every right action, for emails and SMS |
 | Must | Stars per exercise (0–3) and feedback after every exercise: what was right, what was missed, and why |
 | Must | Guides: how to tell real from fake, for the exercises and for real life |
@@ -85,19 +85,21 @@ Red-flags levels always contain flags, so there's no first "scam or real?" step.
 
 ### Scenario mode (21 November 2026)
 
-To cut authoring work by about a third, a day can be **one scenario played in three steps** instead of three separate exercises. Game settings → Mode switches every player between the two. 3-task mode keeps working, but we don't build anything new for it.
+To cut authoring work by about a third, a day can be **one scenario played in 3 to 5 short steps** instead of three separate exercises. Game settings → Mode switches every player between the two. 3-task mode keeps working, but we don't build anything new for it.
 
-| Step | Fake scenario | Real scenario |
-| --- | --- | --- |
-| 1. Real or fake? | Big X or check mark. A wrong answer only says what it was, not why, so steps 2 and 3 aren't spoiled. | Same |
-| 2. Back it up | Tap the red flags (same mechanic as spot the red flags) | Tick every reason that shows it's real |
-| 3. What next? | Tick every right action, e.g. "check reviews on Trustpilot before paying" | Same |
+| Step | What the player does |
+|---|---|
+| What does it want? | "What is this trying to get Anna to do?" Tick every answer that fits: pay or buy, log in or enter bank or card details, give a code or password, call or install something. Always the same four, and the answer must be visible on the first screen. |
+| Red flags | Tap the suspicious sentences in the message, ad or search result. |
+| The page | Ads and search results only: "Anna clicked it anyway", red flags on the landing page. Skipped when it has none. |
+| The reviews | Optional, for fake shops whose page looks fine: Anna looks for reviews, red flags in them. |
+| What next? | Tick every good next step. |
 
-Feedback with reasons comes after steps 2 and 3, and a summary at the end shows the score, why it was real or fake, and the lesson.
+Feedback with reasons comes after every step, and a summary at the end shows the score, why it is a scam, and the lesson.
 
-Scenario media: email, SMS, WhatsApp, Messenger, **social media ads** (Facebook, Instagram) and **search results** (with a "Sponsored" label). All are drawn in HTML from fields, with no images. Ads and search results include the **landing page** Anna reaches after clicking. Its words can be red flags too, and so can the "Sponsored" label. To keep each screen short, ads and search results are played in **four steps**: real or fake (the ad or result alone), back it up on the ad or result, then the landing page on its own ("Anna clicked it anyway…": red flags there, or "Why is this page real?" for real ones), then what next. A red flag belongs to the step whose text contains it. A page step with nothing in it is skipped.
+Scenario media: email, SMS, WhatsApp, Messenger, **social media ads** (Facebook, Instagram) and **search results** (with a "Sponsored" label). All are drawn in HTML from fields, with no images. Ads and search results include the **landing page** Anna reaches after clicking. Its words can be red flags too, and so can the "Sponsored" label. Each part is its own step, and a red flag counts in every part whose text contains it.
 
-**Not everything is a scam.** Real items appear in real or fake and as real scenarios, for example a genuine login code from Anna's bank. Users should learn to *check*, not to distrust everything.
+**Every scenario is a scam** (scenario mode, changed 2026-11-25). We can't write genuine messages that prove anything, because we make them up too. Base each scam on a real reported one and link it in "Based on". What normal messages look like belongs in the guides. 3-task mode still has real items in real or fake.
 
 **Scam tactics as tags.** Every red flag gets a tag for the tactic behind it, so feedback and statistics can talk about tactics and not just single exercises:
 
@@ -223,7 +225,7 @@ A mistake in *what would you do next?* is a right action left unticked or a wron
 
 The scoring rules live in one shared server module with a unit test for every row of the tables above.
 
-**Scenario mode scores 0–100%.** Every step is worth the same: a third, or a quarter for four-step ads and search results. Step 1 is all or nothing. Red flags score found ÷ total, minus 0.1 per wrong tap. Tick-the-right-answers steps score (right ticks − wrong ticks) ÷ right answers. Nothing goes below 0. The server replays every answer to work out the score, so a later "you did better than X% of players today" feature can trust it (that would change the "no leaderboards" line above, so it's for the team to decide).
+**Scenario mode scores 0–100%.** Every step is worth the same. Red flags score found ÷ total, minus 0.1 per wrong tap. Tick-the-right-answers steps score (right ticks − wrong ticks) ÷ right answers. Nothing goes below 0. The server replays every answer to work out the score, so a later "you did better than X% of players today" feature can trust it (that would change the "no leaderboards" line above, so it's for the team to decide).
 
 **Feedback form (user testing).** After the scenario summary, players answer a short anonymous form: age group, then 1–5 scales on confidence spotting scams, knowing what to do, difficulty, clear instructions, readability and ease of use, plus an optional comment. The team edits the questions in Game settings → Feedback form, and a switch makes the form required (on for testing) or skippable. Answers go to the Feedback collection with the day, the scenario, the server's score and a random device id: no name, email or IP.
 

@@ -8,6 +8,7 @@ type TextContent = {
   ad?: { pageName?: Text; text?: Text; headline?: Text; displayUrl?: Text; buttonText?: Text } | null
   search?: { sponsored?: boolean | null; title?: Text; displayUrl?: Text; snippet?: Text } | null
   landing?: { url?: Text; siteName?: Text; headline?: Text; body?: Text; buttonText?: Text } | null
+  check?: { site?: Text; rating?: Text; reviews?: { text?: Text }[] | null } | null
 }
 
 // Fixed labels the game draws itself. They're tappable too: "Sponsored" can be a red flag.
@@ -54,20 +55,31 @@ export function textSegments(exercise: TextContent): Record<string, string> {
     segments['landing.body'] = landing?.body
     segments['landing.buttonText'] = landing?.buttonText
   }
+  // The reviews Anna finds when she checks a shop. Optional for any medium.
+  segments['check.site'] = exercise.check?.site
+  segments['check.rating'] = exercise.check?.rating
+  exercise.check?.reviews?.forEach((review, i) => {
+    segments[`check.review.${i}`] = review.text
+  })
   return Object.fromEntries(Object.entries(segments).filter((e): e is [string, string] => Boolean(e[1])))
 }
 
-// Ad and search scenarios are played in two parts: the ad or result first, then the page
-// Anna lands on. Each part has its own red-flag step.
-export type ScenarioPart = 'content' | 'landing'
+// A scenario is played in parts, each with its own red-flag step: the message, ad or result
+// itself, then (ads and search results) the page Anna lands on, then (optional) the reviews
+// she finds when she checks.
+export const SCENARIO_PARTS = ['content', 'landing', 'check'] as const
+export type ScenarioPart = (typeof SCENARIO_PARTS)[number]
 
-const inPart = (id: string, part: ScenarioPart) => id.startsWith('landing.') === (part === 'landing')
+const partOf = (id: string): ScenarioPart => (id.startsWith('landing.') ? 'landing' : id.startsWith('check.') ? 'check' : 'content')
 
 export function partSegments(exercise: TextContent, part: ScenarioPart): Record<string, string> {
-  return Object.fromEntries(Object.entries(textSegments(exercise)).filter(([id]) => inPart(id, part)))
+  return Object.fromEntries(Object.entries(textSegments(exercise)).filter(([id]) => partOf(id) === part))
 }
 
-// A flag belongs to the ad or result when its text appears there, otherwise to the page.
-export function flagPart(exercise: TextContent, flag: string): ScenarioPart {
-  return Object.values(partSegments(exercise, 'content')).some((text) => text.includes(flag)) ? 'content' : 'landing'
-}
+// A flag counts in every part whose text contains it, so a "-80%" in both the ad and the
+// page is never a wrong tap on either.
+export const flagInPart = (exercise: TextContent, flag: string, part: ScenarioPart) =>
+  Object.values(partSegments(exercise, part)).some((text) => text.includes(flag))
+
+// Whether the scenario has reviews to check, so the reviews step is drawn at all.
+export const hasCheck = (exercise: TextContent) => Object.keys(partSegments(exercise, 'check')).length > 0

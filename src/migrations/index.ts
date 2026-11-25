@@ -5,6 +5,7 @@ import * as migration_20261105_205147_media_object_key from './20261105_205147_m
 import * as migration_20261121_181155_scenario_mode from './20261121_181155_scenario_mode';
 import * as migration_20261123_144458_show_all_scenarios from './20261123_144458_show_all_scenarios';
 import * as migration_20261123_150103_page_why_real from './20261123_150103_page_why_real';
+import * as migration_20261125_110813_scam_only from './20261125_110813_scam_only';
 
 export const migrations = [
   {
@@ -40,6 +41,11 @@ export const migrations = [
   {
     up: migration_20261123_150103_page_why_real.up,
     down: migration_20261123_150103_page_why_real.down,
-    name: '20261123_150103_page_why_real'
+    name: '20261123_150103_page_why_real',
+  },
+  {
+    up: migration_20261125_110813_scam_only.up,
+    down: migration_20261125_110813_scam_only.down,
+    name: '20261125_110813_scam_only'
   },
 ];

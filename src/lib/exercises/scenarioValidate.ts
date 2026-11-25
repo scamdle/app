@@ -1,9 +1,11 @@
 import type { ScenarioMedium } from './options'
+import { flagInPart, hasCheck } from './segments'
 import {
   choiceProblems,
   emailProblems,
   flagProblems,
   messageProblems,
+  filled,
   problemList,
   rows,
   type ExerciseProblem,
@@ -13,7 +15,7 @@ import {
 // Runs when a scenario is set to Published, so a broken one can never reach a player.
 export function scenarioProblems(data: Row): ExerciseProblem[] {
   const list = problemList()
-  const { problems, need } = list
+  const { problems, need, add } = list
   const group = (name: string) => (data[name] ?? {}) as Row
   const medium = data.medium as ScenarioMedium
 
@@ -46,14 +48,14 @@ export function scenarioProblems(data: Row): ExerciseProblem[] {
     need('landing.headline', group('landing').headline, 'Add the landing page headline.')
   }
 
-  need('verdict', data.verdict, 'Choose whether this is real or fake.')
-  need('verdictReason', data.verdictReason, 'Explain why it is real or fake.')
-  if (data.verdict === 'fake') flagProblems(data, list)
-  if (data.verdict === 'real') choiceProblems('whyReal', data.whyReal, list)
-  // Optional: without it, real ads and search results skip the page step.
-  if (data.verdict === 'real' && (medium === 'ad' || medium === 'search') && rows(data.pageWhyReal).length > 0) {
-    choiceProblems('pageWhyReal', data.pageWhyReal, list)
-  }
+  const wants = Array.isArray(data.wants) ? data.wants : []
+  if (wants.length === 0) add('wants', 'Pick what this scam wants Anna to do.')
+  need('wantsExplanation', data.wantsExplanation, 'Explain what on the first screen shows it.')
+  need('verdictReason', data.verdictReason, 'Explain why it is a scam.')
+  flagProblems(data, list)
+  // A filled-in review check gets its own step, so it needs a red flag to find.
+  const reviewFlag = rows(data.flags).some((flag) => filled(flag.text) && flagInPart(data, String(flag.text), 'check'))
+  if (hasCheck(data) && !reviewFlag) add('check', 'Add a red flag from the reviews, or leave the review check empty.')
 
   need('nextPrompt', data.nextPrompt, 'Add the "what next" question.')
   choiceProblems('nextOptions', data.nextOptions, list)

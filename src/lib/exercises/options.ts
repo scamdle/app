@@ -40,12 +40,22 @@ export const AD_PLATFORMS = [
   { label: 'Instagram', value: 'instagram' },
 ] as const
 
+// Step 1: what the scam wants Anna to do. The same four answers every day, so players learn
+// that every scam ends in one of these.
+export const SCENARIO_WANTS = [
+  { label: 'Pay or buy something', value: 'pay' },
+  { label: 'Log in, or enter her bank or card details', value: 'details' },
+  { label: 'Give a code or password', value: 'code' },
+  { label: 'Call a number or install something', value: 'call' },
+] as const
+
+export type ScenarioWant = (typeof SCENARIO_WANTS)[number]['value']
 export type ScenarioMedium = (typeof SCENARIO_MEDIA)[number]['value']
 export type AdPlatform = (typeof AD_PLATFORMS)[number]['value']
 
 export const GAME_MODES = [
   { label: '3 separate tasks', value: 'three-tasks' },
-  { label: '1 scenario in 3 steps', value: 'scenario' },
+  { label: '1 scenario in steps', value: 'scenario' },
 ] as const
 
 export type GameMode = (typeof GAME_MODES)[number]['value']
